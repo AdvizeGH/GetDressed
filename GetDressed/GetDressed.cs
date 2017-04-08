@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using GetDressed.Framework;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
@@ -21,41 +20,26 @@ namespace GetDressed
 {
     public class GetDressed : Mod
     {
-        public static IModHelper modHelper;
-        public static IMonitor modMonitor;
-        public static float playerZoomLevel;
-        public static LocalConfig currentConfig { get; protected set; }
-        public static GlobalConfig globalConfig { get; protected set; }
-        private static ContentManager cm;
-        private static Texture2D accessoriesTexture;
-        public static Texture2D menuTextures;
+        private ContentHelper ContentHelper;
+        private LocalConfig PlayerConfig;
+        private GlobalConfig GlobalConfig;
 
         private bool titleSubMenuChanged = false;
         private IClickableMenu previousSubMenu = null;
         private List<Farmer> farmers = new List<Farmer>();
         private List<LocalConfig> farmerConfigs = new List<LocalConfig>();
         private int loadtime = 0;
-        public const string versionNumber = "3.2";
 
         public override void Entry(IModHelper helper)
         {
-            modHelper = helper;
-            modMonitor = Monitor;
+            this.ContentHelper = new ContentHelper(helper, this.Monitor);
+
             ControlEvents.MouseChanged += Event_MouseChanged;
             ControlEvents.ControllerButtonPressed += Event_ControllerButtonPressed;
             GameEvents.UpdateTick += Event_UpdateTick;
             TimeEvents.DayOfMonthChanged += Event_DayOfMonthChanged;
-            globalConfig = helper.ReadConfig<GlobalConfig>();
+            this.GlobalConfig = helper.ReadConfig<GlobalConfig>();
             ControlEvents.KeyPressed += Event_KeyPressed;
-
-            /*modMonitor.Log("0", LogLevel.Trace);
-            modMonitor.Log("1", LogLevel.Debug);
-            modMonitor.Log("2", LogLevel.Info);
-            modMonitor.Log("3", LogLevel.Warn);
-            modMonitor.Log("4", LogLevel.Error);
-            modMonitor.Log("5", LogLevel.Alert);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("lol");*/
         }
 
         private void Event_MouseChanged(object sender, EventArgsMouseStateChanged e)
@@ -78,15 +62,14 @@ namespace GetDressed
 
         private void Event_KeyPressed(object sender, EventArgsKeyPressed e)
         {
-            if (e.KeyPressed.ToString().Equals(globalConfig.menuAccessKey))
+            if (e.KeyPressed.ToString().Equals(this.GlobalConfig.menuAccessKey))
             {
                 Game1.player.completelyStopAnimatingOrDoingAction();
 
-                if (Game1.hasLoadedGame && Game1.activeClickableMenu == null && currentConfig != null)
+                if (Game1.hasLoadedGame && Game1.activeClickableMenu == null && this.PlayerConfig != null)
                 {
-                    playerZoomLevel = Game1.options.zoomLevel;
                     Game1.playSound("bigDeSelect");
-                    Game1.activeClickableMenu = new CharacterCustomizationMenu();
+                    Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
                 }
             }
         }
@@ -110,10 +93,8 @@ namespace GetDressed
                 {
                     if (propertyValue == "GetDressed")
                     {
-                        playerZoomLevel = Game1.options.zoomLevel;
-
                         Game1.playSound("bigDeSelect");
-                        Game1.activeClickableMenu = new CharacterCustomizationMenu();
+                        Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
                     }
                 }
             }
@@ -121,7 +102,8 @@ namespace GetDressed
 
         private void Event_UpdateTick(object sender, EventArgs e)
         {
-            if (cm == null) InitializeContent();
+            if (!this.ContentHelper.IsInitialised)
+                this.ContentHelper.InitializeContent(Game1.content.ServiceProvider);
 
             if (!Game1.hasLoadedGame)
             {
@@ -131,7 +113,7 @@ namespace GetDressed
             farmers.Clear();
             farmerConfigs.Clear();
 
-            if (string.IsNullOrEmpty(Constants.SaveFolderName))
+            if (string.IsNullOrEmpty(ModConstants.PerSaveConfigPath))
                 return;
 
             GameEvents.EighthUpdateTick += Event_EightUpdateTick;
@@ -154,30 +136,30 @@ namespace GetDressed
                         return;
                 }
 
-                currentConfig = modHelper.ReadJsonFile<LocalConfig>(Path.Combine("psconfigs", $"{Constants.SaveFolderName}.json")) ?? new LocalConfig();
+                this.PlayerConfig = this.Helper.ReadJsonFile<LocalConfig>(ModConstants.PerSaveConfigPath) ?? new LocalConfig();
 
-                Texture2D farmer_base = InitTexture(Game1.player.isMale);
+                Texture2D farmer_base = this.ContentHelper.InitTexture(Game1.player.isMale);
                 if (Game1.player.isMale)
                 {
-                    PatchTexture(ref farmer_base, "male_faces.png", currentConfig.chosenFace[0] * globalConfig.maleNoseTypes + currentConfig.chosenNose[0] + (currentConfig.chosenShoes[0] * (globalConfig.maleNoseTypes * globalConfig.maleFaceTypes)), 0);
-                    PatchTexture(ref farmer_base, "male_bottoms.png", (currentConfig.chosenBottoms[0] >= globalConfig.maleBottomsTypes) ? 0 : currentConfig.chosenBottoms[0], 3);
+                    this.ContentHelper.PatchTexture(ref farmer_base, "male_faces.png", this.PlayerConfig.chosenFace[0] * this.GlobalConfig.maleNoseTypes + this.PlayerConfig.chosenNose[0] + (this.PlayerConfig.chosenShoes[0] * (this.GlobalConfig.maleNoseTypes * this.GlobalConfig.maleFaceTypes)), 0);
+                    this.ContentHelper.PatchTexture(ref farmer_base, "male_bottoms.png", (this.PlayerConfig.chosenBottoms[0] >= this.GlobalConfig.maleBottomsTypes) ? 0 : this.PlayerConfig.chosenBottoms[0], 3);
                 }
                 else
                 {
-                    PatchTexture(ref farmer_base, "female_faces.png", currentConfig.chosenFace[0] * globalConfig.femaleNoseTypes + currentConfig.chosenNose[0] + (currentConfig.chosenShoes[0] * (globalConfig.femaleNoseTypes * globalConfig.femaleFaceTypes)), 0);
-                    PatchTexture(ref farmer_base, "female_bottoms.png", currentConfig.chosenBottoms[0], 3);
+                    this.ContentHelper.PatchTexture(ref farmer_base, "female_faces.png", this.PlayerConfig.chosenFace[0] * this.GlobalConfig.femaleNoseTypes + this.PlayerConfig.chosenNose[0] + (this.PlayerConfig.chosenShoes[0] * (this.GlobalConfig.femaleNoseTypes * this.GlobalConfig.femaleFaceTypes)), 0);
+                    this.ContentHelper.PatchTexture(ref farmer_base, "female_bottoms.png", this.PlayerConfig.chosenBottoms[0], 3);
                 }
-                PatchFarmerRenderer(Game1.player, farmer_base);
+                this.ContentHelper.PatchFarmerRenderer(Game1.player, farmer_base);
 
-                if (currentConfig.firstRun)
+                if (this.PlayerConfig.firstRun)
                 {
-                    currentConfig.chosenAccessory[0] = Game1.player.accessory;
-                    currentConfig.firstRun = false;
-                    modHelper.WriteJsonFile(Path.Combine("psconfigs", $"{Constants.SaveFolderName}.json"), currentConfig);
+                    this.PlayerConfig.chosenAccessory[0] = Game1.player.accessory;
+                    this.PlayerConfig.firstRun = false;
+                    this.Helper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
                 }
                 else
                 {
-                    Game1.player.accessory = currentConfig.chosenAccessory[0];
+                    Game1.player.accessory = this.PlayerConfig.chosenAccessory[0];
                 }
 
                 try
@@ -210,41 +192,6 @@ namespace GetDressed
 
             PatchMap(Game1.getLocationFromName("FarmHouse") as FarmHouse);
             GameEvents.SecondUpdateTick -= Event_SecondUpdateTick;
-        }
-
-        private static void InitializeContent()
-        {
-            if (cm != null) return;
-
-            cm = new ContentManager(Game1.content.ServiceProvider, Path.Combine(modHelper.DirectoryPath, "overrides"));
-            try
-            {
-                accessoriesTexture = cm.Load<Texture2D>("accessories");
-                menuTextures = cm.Load<Texture2D>("menuTextures");
-            }
-            catch
-            {
-                modMonitor.Log("Could not find either the accessories file or the menuTextures file.", LogLevel.Error);
-            }
-        }
-
-        public static Texture2D InitTexture(bool isMale, bool returnNew = true)
-        {
-            if (cm == null)
-                InitializeContent();
-
-            ContentManager content = !returnNew ? cm : new ContentManager(Game1.content.ServiceProvider, Path.Combine(modHelper.DirectoryPath, "overrides"));
-            Texture2D farmer_base;
-            try
-            {
-                farmer_base = isMale ? content.Load<Texture2D>("farmer_base") : content.Load<Texture2D>("farmer_girl_base");
-                return farmer_base;
-            }
-            catch
-            {
-                modMonitor.Log("Could not find base file.", LogLevel.Error);
-            }
-            return null;
         }
 
         private void FixLoadGameMenu()
@@ -281,19 +228,18 @@ namespace GetDressed
                                 farmerConfigs[i].firstRun = false;
                                 Helper.WriteJsonFile(Path.Combine("psconfigs", $"{farmerConfigs[i].saveName}.json"), farmerConfigs[i]);
                             }
-                            Texture2D farmer_base = InitTexture(farmers[i].isMale);
+                            Texture2D farmer_base = this.ContentHelper.InitTexture(farmers[i].isMale);
                             if (farmers[i].isMale)
                             {
-
-                                PatchTexture(ref farmer_base, "male_faces.png", farmerConfigs[i].chosenFace[0] * globalConfig.maleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (globalConfig.maleNoseTypes * globalConfig.maleFaceTypes)), 0);
-                                PatchTexture(ref farmer_base, "male_bottoms.png", (farmerConfigs[i].chosenBottoms[0] >= globalConfig.maleBottomsTypes) ? 0 : farmerConfigs[i].chosenBottoms[0], 3);
+                                this.ContentHelper.PatchTexture(ref farmer_base, "male_faces.png", farmerConfigs[i].chosenFace[0] * this.GlobalConfig.maleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (this.GlobalConfig.maleNoseTypes * this.GlobalConfig.maleFaceTypes)), 0);
+                                this.ContentHelper.PatchTexture(ref farmer_base, "male_bottoms.png", (farmerConfigs[i].chosenBottoms[0] >= this.GlobalConfig.maleBottomsTypes) ? 0 : farmerConfigs[i].chosenBottoms[0], 3);
                             }
                             else
                             {
-                                PatchTexture(ref farmer_base, "female_faces.png", farmerConfigs[i].chosenFace[0] * globalConfig.femaleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (globalConfig.femaleNoseTypes * globalConfig.femaleFaceTypes)), 0);
-                                PatchTexture(ref farmer_base, "female_bottoms.png", farmerConfigs[i].chosenBottoms[0], 3);
+                                this.ContentHelper.PatchTexture(ref farmer_base, "female_faces.png", farmerConfigs[i].chosenFace[0] * this.GlobalConfig.femaleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (this.GlobalConfig.femaleNoseTypes * this.GlobalConfig.femaleFaceTypes)), 0);
+                                this.ContentHelper.PatchTexture(ref farmer_base, "female_bottoms.png", farmerConfigs[i].chosenBottoms[0], 3);
                             }
-                            PatchFarmerRenderer(farmers[i], farmer_base);
+                            this.ContentHelper.PatchFarmerRenderer(farmers[i], farmer_base);
                             farmers[i].accessory = farmerConfigs[i].chosenAccessory[0];
                         }
                     }
@@ -353,20 +299,20 @@ namespace GetDressed
             farmerConfigs.Sort();
         }
 
-        public void PatchTileSheet()
+        private void PatchTileSheet()
         {
             Dictionary<TileSheet, Texture2D> tileSheetTextures = (Dictionary<TileSheet, Texture2D>)typeof(XnaDisplayDevice).GetField("m_tileSheetTextures", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Game1.mapDisplayDevice as XnaDisplayDevice);
             Texture2D tex = tileSheetTextures[Game1.getLocationFromName("FarmHouse").map.TileSheets[Tile.getTileSheetIndex("untitled tile sheet", Game1.getLocationFromName("FarmHouse").map.TileSheets)]];
             if (tex != null)
             {
-                PatchTexture(ref tex, "dresser.png", 0, 231, 16, 16);
-                PatchTexture(ref tex, "dresser.png", 1, 232, 16, 16);
+                this.ContentHelper.PatchTexture(ref tex, "dresser.png", 0, 231, 16, 16);
+                this.ContentHelper.PatchTexture(ref tex, "dresser.png", 1, 232, 16, 16);
             }
         }
 
         private void PatchMap(FarmHouse fh)
         {
-            if (!globalConfig.showDresser) return;
+            if (!this.GlobalConfig.showDresser) return;
 
             List<Tile> tileArray = new List<Tile>();
             int x; int top = 231; int bottom = 232;
@@ -374,7 +320,7 @@ namespace GetDressed
             switch (fh.upgradeLevel)
             {
                 case 0:
-                    x = globalConfig.stoveInCorner ? 7 : 10;
+                    x = this.GlobalConfig.stoveInCorner ? 7 : 10;
                     tileArray.Add(new Tile(2, x, 2, /*1224*/top, tileSheet: "untitled tile sheet"));
                     tileArray.Add(new Tile(1, x, 3, /*179*/bottom, tileSheet: "untitled tile sheet"));
                     break;
@@ -418,7 +364,7 @@ namespace GetDressed
             switch (fh.upgradeLevel)
             {
                 case 0:
-                    x = globalConfig.stoveInCorner ? 7 : 10;
+                    x = this.GlobalConfig.stoveInCorner ? 7 : 10;
                     fh.setTileProperty(x, 3, "Buildings", "Action", "GetDressed");
                     break;
                 case 1:
@@ -459,41 +405,6 @@ namespace GetDressed
                 }
             }
             return tileArray;
-        }
-
-        public void PatchFarmerRenderer(Farmer farmer, Texture2D baseFile)
-        {
-            if (cm == null) InitializeContent();
-
-            farmer.FarmerRenderer = new FarmerRenderer(baseFile);
-            farmer.FarmerRenderer.heightOffset = farmer.isMale ? 0 : 4;
-            FarmerRenderer.accessoriesTexture = accessoriesTexture;
-            FixFarmerEffects(farmer);
-        }
-
-        public static void PatchTexture(ref Texture2D targetTexture, string overridingTexturePath, int sourceID, int targetID, int gridWidth = 96, int gridHeight = 672)
-        {
-            using (FileStream textureStream = new FileStream(Path.Combine(cm.RootDirectory, overridingTexturePath), FileMode.Open))
-            {
-                Texture2D sourceTexture = Texture2D.FromStream(Game1.graphics.GraphicsDevice, textureStream);
-                Color[] data = new Color[gridWidth * gridHeight];
-                sourceTexture.GetData(0, GetSourceRect(sourceID, sourceTexture, gridWidth, gridHeight), data, 0, data.Length);
-                targetTexture.SetData(0, GetSourceRect(targetID, targetTexture, gridWidth, gridHeight), data, 0, data.Length);
-            }
-        }
-
-        private static Rectangle GetSourceRect(int index, Texture2D texture, int gridWidth, int gridHeight) => new Rectangle(index % (texture.Width / gridWidth) * gridWidth, index / (texture.Width / gridWidth) * gridHeight, gridWidth, gridHeight);
-
-        public static void FixFarmerEffects(Farmer farmer)
-        {
-            farmer.changeShirt(farmer.shirt);
-            farmer.changeEyeColor(farmer.newEyeColor);
-            farmer.changeSkinColor(farmer.skin);
-
-            if (farmer.boots != null)
-            {
-                farmer.changeShoeColor(farmer.boots.indexInColorSheet);
-            }
         }
     }
 }
