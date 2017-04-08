@@ -38,6 +38,10 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Framework\Alert.cs" />
+    <Compile Include="Framework\CharacterCustomizationMenu.cs" />
+    <Compile Include="Framework\GlobalConfig.cs" />
+    <Compile Include="Framework\LocalConfig.cs" />
     <Compile Include="GetDressed.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tile.cs" />
