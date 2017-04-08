@@ -5,10 +5,9 @@
     "MajorVersion": 3,
     "MinorVersion": 2,
     "PatchVersion": 0,
-    "Build": ""
+    "Build": null
   },
-  "Description": "Adds a dresser in the farmhouse that you can use to edit your character's appearance",
-  "UniqueID": "",
-  "PerSaveConfigs": true,
+  "Description": "Adds a dresser in the farmhouse that you can use to edit your character's appearance.",
+  "UniqueID": "Advize.GetDressed",
   "EntryDll": "GetDressed.dll"
 }
