@@ -11,8 +11,14 @@ using StardewValley.Menus;
 
 namespace GetDressed.Framework
 {
-    public class CharacterCustomizationMenu : IClickableMenu
+    internal class CharacterCustomizationMenu : IClickableMenu
     {
+        private readonly ContentHelper ContentHelper;
+        private readonly IModHelper ModHelper;
+        private readonly float PlayerZoomLevel;
+        private readonly GlobalConfig GlobalConfig;
+        private readonly LocalConfig PlayerConfig;
+
         private List<Alert> alerts = new List<Alert>();
 
         private ColorPicker pantsColorPicker;
@@ -87,24 +93,35 @@ namespace GetDressed.Framework
 
         private int currentTab = 1;
 
-        public int faceType = GetDressed.currentConfig.chosenFace[0];
+        private int faceType;
 
-        public int noseType = GetDressed.currentConfig.chosenNose[0];
+        private int noseType;
 
-        public int bottoms = GetDressed.currentConfig.chosenBottoms[0];
+        private int bottoms;
 
-        public int shoes = GetDressed.currentConfig.chosenShoes[0];
+        private int shoes;
 
         private string hoverText = "";
 
-        public bool letUserAssignOpenMenuKey = false;
+        private bool letUserAssignOpenMenuKey = false;
 
-        public bool showFloatingPurpleArrow = false;
+        private bool showFloatingPurpleArrow = false;
 
-        public CharacterCustomizationMenu()
+        public CharacterCustomizationMenu(ContentHelper contentHelper, IModHelper modHelper, GlobalConfig globalConfig, LocalConfig playerConfig, float zoomLevel)
             : base(Game1.viewport.Width / 2 - (680 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, 632 + borderWidth * 2, 600 + borderWidth * 4 + Game1.tileSize, false)
         {
-            Game1.options.zoomLevel = GetDressed.globalConfig.menuZoomOut ? 0.75f : 1f;
+            this.ContentHelper = contentHelper;
+            this.ModHelper = modHelper;
+            this.GlobalConfig = globalConfig;
+            this.PlayerConfig = playerConfig;
+            this.PlayerZoomLevel = zoomLevel;
+
+            this.faceType = playerConfig.chosenFace[0];
+            this.noseType = playerConfig.chosenNose[0];
+            this.bottoms = playerConfig.chosenBottoms[0];
+            this.shoes = playerConfig.chosenShoes[0];
+
+            Game1.options.zoomLevel = this.GlobalConfig.menuZoomOut ? 0.75f : 1f;
             Game1.overrideGameMenuReset = true;
             //Program.gamePtr.refreshWindowSettings();
             Game1.game1.refreshWindowSettings();
@@ -136,12 +153,14 @@ namespace GetDressed.Framework
             extraFavButtons.Clear();
             saveFavButtons.Clear();
 
+            var menuTextures = this.ContentHelper.menuTextures;
+
             //Tabs Buttons and Icons & Cancel Button
-            charIcon = new ClickableTextureComponent("Customize Character", new Rectangle(xPositionOnScreen + 62, yPositionOnScreen + 40, 50, 50), "", "", GetDressed.menuTextures, new Rectangle(9, 48, 8, 11), Game1.pixelZoom);
-            favIcon = new ClickableTextureComponent("Manage Favorites", new Rectangle(xPositionOnScreen + 125, yPositionOnScreen + 40, 50, 50), "", "", GetDressed.menuTextures, new Rectangle(24, 26, 8, 8), Game1.pixelZoom);
-            aboutIcon = new ClickableTextureComponent("About", new Rectangle(xPositionOnScreen + 188, yPositionOnScreen + 33, 50, 50), "", "", GetDressed.menuTextures, new Rectangle(0, 48, 8, 11), Game1.pixelZoom);
-            quickFavsIcon = new ClickableTextureComponent("Quick Outfits", new Rectangle(xPositionOnScreen - 23, yPositionOnScreen + 122, 50, 50), "", "", GetDressed.menuTextures, new Rectangle(8, 26, 8, 8), Game1.pixelZoom);
-            extraFavsIcon = new ClickableTextureComponent("Extra Outfits", new Rectangle(xPositionOnScreen - 23, yPositionOnScreen + 186, 50, 50), "", "", GetDressed.menuTextures, new Rectangle(0, 26, 8, 8), Game1.pixelZoom);
+            charIcon = new ClickableTextureComponent("Customize Character", new Rectangle(xPositionOnScreen + 62, yPositionOnScreen + 40, 50, 50), "", "", menuTextures, new Rectangle(9, 48, 8, 11), Game1.pixelZoom);
+            favIcon = new ClickableTextureComponent("Manage Favorites", new Rectangle(xPositionOnScreen + 125, yPositionOnScreen + 40, 50, 50), "", "", menuTextures, new Rectangle(24, 26, 8, 8), Game1.pixelZoom);
+            aboutIcon = new ClickableTextureComponent("About", new Rectangle(xPositionOnScreen + 188, yPositionOnScreen + 33, 50, 50), "", "", menuTextures, new Rectangle(0, 48, 8, 11), Game1.pixelZoom);
+            quickFavsIcon = new ClickableTextureComponent("Quick Outfits", new Rectangle(xPositionOnScreen - 23, yPositionOnScreen + 122, 50, 50), "", "", menuTextures, new Rectangle(8, 26, 8, 8), Game1.pixelZoom);
+            extraFavsIcon = new ClickableTextureComponent("Extra Outfits", new Rectangle(xPositionOnScreen - 23, yPositionOnScreen + 186, 50, 50), "", "", menuTextures, new Rectangle(0, 26, 8, 8), Game1.pixelZoom);
 
             menuTabs.Add(charIcon);
             menuTabs.Add(favIcon);
@@ -165,8 +184,8 @@ namespace GetDressed.Framework
             genderButtons.Add(new ClickableTextureComponent("Male", new Rectangle((xPositionOnScreen + 25) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + 8, (yPositionOnScreen + 70) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), null, "Male", Game1.mouseCursors, new Rectangle(128, 192, 16, 16), (Game1.pixelZoom / 2), false));
             genderButtons.Add(new ClickableTextureComponent("Female", new Rectangle((xPositionOnScreen + 25) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + Game1.tileSize + 8, (yPositionOnScreen + 70) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), null, "Female", Game1.mouseCursors, new Rectangle(144, 192, 16, 16), (Game1.pixelZoom / 2), false));
 
-            maleOutlineButton = new ClickableTextureComponent("", new Rectangle((xPositionOnScreen + 24) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + 8, (yPositionOnScreen + 68) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), "", "", GetDressed.menuTextures, new Rectangle(19, 38, 19, 19), (Game1.pixelZoom / 2), false);
-            femaleOutlineButton = new ClickableTextureComponent("", new Rectangle((xPositionOnScreen + 22) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + Game1.tileSize + 8, (yPositionOnScreen + 67) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), "", "", GetDressed.menuTextures, new Rectangle(19, 38, 19, 19), (Game1.pixelZoom / 2), false);
+            maleOutlineButton = new ClickableTextureComponent("", new Rectangle((xPositionOnScreen + 24) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + 8, (yPositionOnScreen + 68) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), "", "", menuTextures, new Rectangle(19, 38, 19, 19), (Game1.pixelZoom / 2), false);
+            femaleOutlineButton = new ClickableTextureComponent("", new Rectangle((xPositionOnScreen + 22) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 2 + Game1.tileSize + 8, (yPositionOnScreen + 67) + borderWidth + spaceToClearTopBorder + Game1.tileSize * 3, Game1.tileSize, Game1.tileSize), "", "", menuTextures, new Rectangle(19, 38, 19, 19), (Game1.pixelZoom / 2), false);
 
             num = Game1.tileSize * 4 + 8 + 50;
             arrowButtons.Add(new ClickableTextureComponent("Skin", new Rectangle((xPositionOnScreen + 16) + spaceToClearSideBorder + borderWidth + Game1.tileSize / 4, (yPositionOnScreen + 36) + borderWidth + spaceToClearTopBorder + num, Game1.tileSize, Game1.tileSize), "", "-1", Game1.mouseCursors, Game1.getSourceRectForStandardTileSheet(Game1.mouseCursors, 44, -1, -1), 0.75f, false));
@@ -223,28 +242,28 @@ namespace GetDressed.Framework
             #region Set Up Favorites Pages
             //Manage Favorites and Extra Outfits Menu
             int y = favoriteExists(1) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(24, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 348) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(24, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(24, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 348) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(24, y, 8, 8), 4.5f));
 
             y = favoriteExists(2) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 475) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(8, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 423) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(8, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 475) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(8, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 423) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(8, y, 8, 8), 4.5f));
 
             y = favoriteExists(3) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 525) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 498) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 565) + Game1.pixelZoom * 12, (yPositionOnScreen + 525) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 4) + Game1.pixelZoom * 12, (yPositionOnScreen + 498) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
 
             y = favoriteExists(4) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(24, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 348) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(24, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(24, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 348) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(24, y, 8, 8), 4.5f));
 
             y = favoriteExists(5) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 475) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(8, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 423) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(8, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 475) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(8, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 423) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(8, y, 8, 8), 4.5f));
 
             y = favoriteExists(6) ? 26 : 67;
-            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 525) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), Game1.pixelZoom));
-            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 498) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
+            primaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 610) + Game1.pixelZoom * 12, (yPositionOnScreen + 525) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), Game1.pixelZoom));
+            secondaryFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 380) + Game1.pixelZoom * 12, (yPositionOnScreen + 498) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
 
             saveFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 225) + Game1.pixelZoom * 12, (yPositionOnScreen + 350) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f));
             saveFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 225) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f));
@@ -254,33 +273,33 @@ namespace GetDressed.Framework
             saveFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 425) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f));
             saveFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 500) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f));
 
-            loadFavButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 475) + Game1.pixelZoom * 12, (yPositionOnScreen + 405) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 20, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, 207, 26, 11), 3f);
-            saveFavButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 475) + Game1.pixelZoom * 12, (yPositionOnScreen + 455) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 20, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, 193, 26, 11), 3f);
+            loadFavButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 475) + Game1.pixelZoom * 12, (yPositionOnScreen + 405) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 20, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, 207, 26, 11), 3f);
+            saveFavButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 475) + Game1.pixelZoom * 12, (yPositionOnScreen + 455) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 20, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, 193, 26, 11), 3f);
 
             for (int i = 0; i < 10; i++)
             {
                 y = favoriteExists(i + 7) ? 26 : 67;
-                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 520) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
+                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 520) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
             }
 
             for (int i = 0; i < 10; i++)
             {
                 y = favoriteExists(i + 17) ? 26 : 67;
-                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 570) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
+                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 570) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
             }
 
             for (int i = 0; i < 10; i++)
             {
                 y = favoriteExists(i + 27) ? 26 : 67;
-                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 620) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
+                extraFavButtons.Add(new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 80 + (i * 50)) + Game1.pixelZoom * 12, (yPositionOnScreen + 620) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, y, 8, 8), 4.5f));
             }
             #endregion
             #region Set Up About Page
             //About Menu
             setNewMenuAccessKeyButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 400) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f);
             hideMaleSkirtsButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 475) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f);
-            zoomOutButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 550) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(0, GetDressed.globalConfig.menuZoomOut ? 177 : 167, 7, 9), 3f);
-            zoomInButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 636) + Game1.pixelZoom * 12, (yPositionOnScreen + 550) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), GetDressed.menuTextures, new Rectangle(10, GetDressed.globalConfig.menuZoomOut ? 167 : 177, 7, 9), 3f);
+            zoomOutButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 550) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(0, this.GlobalConfig.menuZoomOut ? 177 : 167, 7, 9), 3f);
+            zoomInButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 636) + Game1.pixelZoom * 12, (yPositionOnScreen + 550) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 10, Game1.pixelZoom * 10), menuTextures, new Rectangle(10, this.GlobalConfig.menuZoomOut ? 167 : 177, 7, 9), 3f);
             resetConfigButton = new ClickableTextureComponent(new Rectangle((xPositionOnScreen + 595) + Game1.pixelZoom * 12, (yPositionOnScreen + 625) + Game1.tileSize + Game1.pixelZoom * 14, Game1.pixelZoom * 15, Game1.pixelZoom * 10), Game1.mouseCursors, new Rectangle(294, 428, 21, 11), 3f);
             #endregion
 
@@ -293,7 +312,7 @@ namespace GetDressed.Framework
             Vector2 position1 = new Vector2(xPositionOnScreen - 90, yPositionOnScreen + 35);
             Vector2 position2 = new Vector2(xPositionOnScreen + 120, yPositionOnScreen - 38);
 
-            floatingNewButton = new TemporaryAnimatedSprite(GetDressed.menuTextures, new Rectangle(0, 102, 23, 9), 115, 5, 1, position1, false, false, 0.89f, 0f, Color.White, Game1.pixelZoom, 0f, 0f, 0f, true)
+            floatingNewButton = new TemporaryAnimatedSprite(this.ContentHelper.menuTextures, new Rectangle(0, 102, 23, 9), 115, 5, 1, position1, false, false, 0.89f, 0f, Color.White, Game1.pixelZoom, 0f, 0f, 0f, true)
             {
                 totalNumberOfLoops = 1,
                 yPeriodic = true,
@@ -301,7 +320,7 @@ namespace GetDressed.Framework
                 yPeriodicRange = Game1.tileSize / 8
             };
 
-            floatingPurpleArrow = new TemporaryAnimatedSprite(GetDressed.menuTextures, new Rectangle(0, 120, 12, 14), 100f, 3, 5, position2, false, false, 0.89f, 0f, Color.White, 3f, 0f, 0f, 0f, true)
+            floatingPurpleArrow = new TemporaryAnimatedSprite(this.ContentHelper.menuTextures, new Rectangle(0, 120, 12, 14), 100f, 3, 5, position2, false, false, 0.89f, 0f, Color.White, 3f, 0f, 0f, 0f, true)
             {
                 yPeriodic = true,
                 yPeriodicLoopTime = 1500f,
@@ -332,12 +351,12 @@ namespace GetDressed.Framework
                             Game1.flashAlpha = 1f;
 
                             Game1.playSound("yoba");
-                            GetDressed.currentConfig.chosenAccessory[0] = Game1.player.accessory;
-                            GetDressed.currentConfig.chosenFace[0] = faceType;
-                            GetDressed.currentConfig.chosenNose[0] = noseType;
-                            GetDressed.currentConfig.chosenBottoms[0] = bottoms;
-                            GetDressed.currentConfig.chosenShoes[0] = shoes;
-                            GetDressed.modHelper.WriteJsonFile(Path.Combine("psconfigs", $"{Constants.SaveFolderName}.json"), GetDressed.currentConfig);
+                            this.PlayerConfig.chosenAccessory[0] = Game1.player.accessory;
+                            this.PlayerConfig.chosenFace[0] = faceType;
+                            this.PlayerConfig.chosenNose[0] = noseType;
+                            this.PlayerConfig.chosenBottoms[0] = bottoms;
+                            this.PlayerConfig.chosenShoes[0] = shoes;
+                            this.ModHelper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
                         }
                     }
                     else
@@ -439,6 +458,8 @@ namespace GetDressed.Framework
 
         public override void receiveLeftClick(int x, int y, bool playSound = true)
         {
+            Texture2D menuTextures = this.ContentHelper.menuTextures;
+
             if (charIcon.containsPoint(x, y))
             {
                 if (isCurrentTab(1))
@@ -496,7 +517,7 @@ namespace GetDressed.Framework
             {
                 Game1.exitActiveMenu();
                 Game1.playSound("bigDeSelect");
-                Game1.options.zoomLevel = GetDressed.playerZoomLevel;
+                Game1.options.zoomLevel = this.PlayerZoomLevel;
                 Game1.overrideGameMenuReset = true;
                 //Program.gamePtr.refreshWindowSettings();
                 Game1.game1.refreshWindowSettings();
@@ -531,7 +552,7 @@ namespace GetDressed.Framework
                     optionButtonClick(okButton.name);
                     okButton.scale -= 0.25f;
                     okButton.scale = Math.Max(0.75f, okButton.scale);
-                    Game1.options.zoomLevel = GetDressed.playerZoomLevel;
+                    Game1.options.zoomLevel = this.PlayerZoomLevel;
                     Game1.overrideGameMenuReset = true;
                     //Program.gamePtr.refreshWindowSettings();
                     Game1.game1.refreshWindowSettings();
@@ -564,27 +585,27 @@ namespace GetDressed.Framework
                             return;
                         }
 
-                        changeBottoms(GetDressed.currentConfig.chosenBottoms[i + 1]);
-                        changeAccessory(GetDressed.currentConfig.chosenAccessory[i + 1]);
-                        changeFaceType(GetDressed.currentConfig.chosenFace[i + 1]);
-                        changeNoseType(GetDressed.currentConfig.chosenNose[i + 1]);
-                        changeShoes(GetDressed.currentConfig.chosenShoes[i + 1]);
-                        Game1.player.changeSkinColor(GetDressed.currentConfig.chosenSkin[i + 1]);
-                        Game1.player.changeShirt(GetDressed.currentConfig.chosenShirt[i + 1]);
-                        Game1.player.changeHairStyle(GetDressed.currentConfig.chosenHairstyle[i + 1]);
+                        changeBottoms(this.PlayerConfig.chosenBottoms[i + 1]);
+                        changeAccessory(this.PlayerConfig.chosenAccessory[i + 1]);
+                        changeFaceType(this.PlayerConfig.chosenFace[i + 1]);
+                        changeNoseType(this.PlayerConfig.chosenNose[i + 1]);
+                        changeShoes(this.PlayerConfig.chosenShoes[i + 1]);
+                        Game1.player.changeSkinColor(this.PlayerConfig.chosenSkin[i + 1]);
+                        Game1.player.changeShirt(this.PlayerConfig.chosenShirt[i + 1]);
+                        Game1.player.changeHairStyle(this.PlayerConfig.chosenHairstyle[i + 1]);
 
                         Color haircolorpackedvalue = new Color(0, 0, 0);
-                        haircolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenHairColor[i + 1];
+                        haircolorpackedvalue.PackedValue = this.PlayerConfig.chosenHairColor[i + 1];
                         Game1.player.changeHairColor(haircolorpackedvalue);
                         hairColorPicker.setColor(Game1.player.hairstyleColor);
 
                         Color eyecolorpackedvalue = new Color(0, 0, 0);
-                        eyecolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenEyeColor[i + 1];
+                        eyecolorpackedvalue.PackedValue = this.PlayerConfig.chosenEyeColor[i + 1];
                         Game1.player.changeEyeColor(eyecolorpackedvalue);
                         eyeColorPicker.setColor(Game1.player.newEyeColor);
 
                         Color bottomscolorpackedvalue = new Color(0, 0, 0);
-                        bottomscolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenBottomsColor[i + 1];
+                        bottomscolorpackedvalue.PackedValue = this.PlayerConfig.chosenBottomsColor[i + 1];
                         Game1.player.changePants(bottomscolorpackedvalue);
                         pantsColorPicker.setColor(Game1.player.pantsColor);
 
@@ -651,44 +672,44 @@ namespace GetDressed.Framework
                     if (Game1.player.isMale)
                     {
                         Game1.player.changeHairStyle(Game1.random.Next(16));
-                        changeBottoms(Game1.random.Next(GetDressed.globalConfig.maleBottomsTypes), true);
-                        changeShoes(Game1.random.Next(GetDressed.globalConfig.maleShoeTypes), true);
-                        changeFaceType(Game1.random.Next(GetDressed.globalConfig.maleFaceTypes), true);
-                        changeNoseType(Game1.random.Next(GetDressed.globalConfig.maleNoseTypes), true);
+                        changeBottoms(Game1.random.Next(this.GlobalConfig.maleBottomsTypes), true);
+                        changeShoes(Game1.random.Next(this.GlobalConfig.maleShoeTypes), true);
+                        changeFaceType(Game1.random.Next(this.GlobalConfig.maleFaceTypes), true);
+                        changeNoseType(Game1.random.Next(this.GlobalConfig.maleNoseTypes), true);
                     }
                     else
                     {
                         Game1.player.changeHairStyle(Game1.random.Next(16, 32));
-                        changeBottoms(Game1.random.Next(GetDressed.globalConfig.femaleBottomsTypes), true);
-                        changeShoes(Game1.random.Next(GetDressed.globalConfig.femaleShoeTypes), true);
-                        changeFaceType(Game1.random.Next(GetDressed.globalConfig.femaleFaceTypes), true);
-                        changeNoseType(Game1.random.Next(GetDressed.globalConfig.femaleNoseTypes), true);
+                        changeBottoms(Game1.random.Next(this.GlobalConfig.femaleBottomsTypes), true);
+                        changeShoes(Game1.random.Next(this.GlobalConfig.femaleShoeTypes), true);
+                        changeFaceType(Game1.random.Next(this.GlobalConfig.femaleFaceTypes), true);
+                        changeNoseType(Game1.random.Next(this.GlobalConfig.femaleNoseTypes), true);
                     }
                     patchBase();
 
                     if (Game1.player.isMale)
                     {
                         Game1.player.changeHairStyle(Game1.random.Next(16));
-                        if (GetDressed.globalConfig.hideMaleSkirts)
+                        if (this.GlobalConfig.hideMaleSkirts)
                         {
                             changeBottoms(Game1.random.Next(2));
                         }
                         else
                         {
-                            changeBottoms(Game1.random.Next(GetDressed.globalConfig.maleBottomsTypes));
+                            changeBottoms(Game1.random.Next(this.GlobalConfig.maleBottomsTypes));
                         }
 
-                        changeShoes(Game1.random.Next(GetDressed.globalConfig.maleShoeTypes));
-                        changeFaceType(Game1.random.Next(GetDressed.globalConfig.maleFaceTypes));
-                        changeNoseType(Game1.random.Next(GetDressed.globalConfig.maleNoseTypes));
+                        changeShoes(Game1.random.Next(this.GlobalConfig.maleShoeTypes));
+                        changeFaceType(Game1.random.Next(this.GlobalConfig.maleFaceTypes));
+                        changeNoseType(Game1.random.Next(this.GlobalConfig.maleNoseTypes));
                     }
                     else
                     {
                         Game1.player.changeHairStyle(Game1.random.Next(16, 32));
-                        changeBottoms(Game1.random.Next(GetDressed.globalConfig.femaleBottomsTypes));
-                        changeShoes(Game1.random.Next(GetDressed.globalConfig.femaleShoeTypes));
-                        changeFaceType(Game1.random.Next(GetDressed.globalConfig.femaleFaceTypes));
-                        changeNoseType(Game1.random.Next(GetDressed.globalConfig.femaleNoseTypes));
+                        changeBottoms(Game1.random.Next(this.GlobalConfig.femaleBottomsTypes));
+                        changeShoes(Game1.random.Next(this.GlobalConfig.femaleShoeTypes));
+                        changeFaceType(Game1.random.Next(this.GlobalConfig.femaleFaceTypes));
+                        changeNoseType(Game1.random.Next(this.GlobalConfig.femaleNoseTypes));
                     }
                     if (Game1.random.NextDouble() < 0.88)
                     {
@@ -796,24 +817,24 @@ namespace GetDressed.Framework
                 {
                     if (saveFavButtons[i].containsPoint(x, y))
                     {
-                        GetDressed.currentConfig.chosenBottoms[i + 1] = bottoms;
-                        GetDressed.currentConfig.chosenAccessory[i + 1] = Game1.player.accessory;
-                        GetDressed.currentConfig.chosenFace[i + 1] = faceType;
-                        GetDressed.currentConfig.chosenNose[i + 1] = noseType;
-                        GetDressed.currentConfig.chosenShoes[i + 1] = shoes;
-                        GetDressed.currentConfig.chosenSkin[i + 1] = Game1.player.skin;
-                        GetDressed.currentConfig.chosenShirt[i + 1] = Game1.player.shirt;
-                        GetDressed.currentConfig.chosenHairstyle[i + 1] = Game1.player.hair;
-                        GetDressed.currentConfig.chosenHairColor[i + 1] = Game1.player.hairstyleColor.PackedValue;
-                        GetDressed.currentConfig.chosenEyeColor[i + 1] = Game1.player.newEyeColor.PackedValue;
-                        GetDressed.currentConfig.chosenBottomsColor[i + 1] = Game1.player.pantsColor.PackedValue;
+                        this.PlayerConfig.chosenBottoms[i + 1] = bottoms;
+                        this.PlayerConfig.chosenAccessory[i + 1] = Game1.player.accessory;
+                        this.PlayerConfig.chosenFace[i + 1] = faceType;
+                        this.PlayerConfig.chosenNose[i + 1] = noseType;
+                        this.PlayerConfig.chosenShoes[i + 1] = shoes;
+                        this.PlayerConfig.chosenSkin[i + 1] = Game1.player.skin;
+                        this.PlayerConfig.chosenShirt[i + 1] = Game1.player.shirt;
+                        this.PlayerConfig.chosenHairstyle[i + 1] = Game1.player.hair;
+                        this.PlayerConfig.chosenHairColor[i + 1] = Game1.player.hairstyleColor.PackedValue;
+                        this.PlayerConfig.chosenEyeColor[i + 1] = Game1.player.newEyeColor.PackedValue;
+                        this.PlayerConfig.chosenBottomsColor[i + 1] = Game1.player.pantsColor.PackedValue;
 
-                        GetDressed.modHelper.WriteJsonFile(Path.Combine("psconfigs", $"{Constants.SaveFolderName}.json"), GetDressed.currentConfig);
+                        this.ModHelper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
                         //hide New Button
-                        if (GetDressed.globalConfig.showIntroBanner)
+                        if (this.GlobalConfig.showIntroBanner)
                         {
-                            GetDressed.globalConfig.showIntroBanner = false;
-                            GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
+                            this.GlobalConfig.showIntroBanner = false;
+                            this.ModHelper.WriteConfig(this.GlobalConfig);
                         }
 
                         //banana ;)
@@ -831,24 +852,24 @@ namespace GetDressed.Framework
             {
                 if (saveFavButton.containsPoint(x, y) && favSelected > -1)
                 {
-                    GetDressed.currentConfig.chosenBottoms[favSelected + 1] = bottoms;
-                    GetDressed.currentConfig.chosenAccessory[favSelected + 1] = Game1.player.accessory;
-                    GetDressed.currentConfig.chosenFace[favSelected + 1] = faceType;
-                    GetDressed.currentConfig.chosenNose[favSelected + 1] = noseType;
-                    GetDressed.currentConfig.chosenShoes[favSelected + 1] = shoes;
-                    GetDressed.currentConfig.chosenSkin[favSelected + 1] = Game1.player.skin;
-                    GetDressed.currentConfig.chosenShirt[favSelected + 1] = Game1.player.shirt;
-                    GetDressed.currentConfig.chosenHairstyle[favSelected + 1] = Game1.player.hair;
-                    GetDressed.currentConfig.chosenHairColor[favSelected + 1] = Game1.player.hairstyleColor.PackedValue;
-                    GetDressed.currentConfig.chosenEyeColor[favSelected + 1] = Game1.player.newEyeColor.PackedValue;
-                    GetDressed.currentConfig.chosenBottomsColor[favSelected + 1] = Game1.player.pantsColor.PackedValue;
+                    this.PlayerConfig.chosenBottoms[favSelected + 1] = bottoms;
+                    this.PlayerConfig.chosenAccessory[favSelected + 1] = Game1.player.accessory;
+                    this.PlayerConfig.chosenFace[favSelected + 1] = faceType;
+                    this.PlayerConfig.chosenNose[favSelected + 1] = noseType;
+                    this.PlayerConfig.chosenShoes[favSelected + 1] = shoes;
+                    this.PlayerConfig.chosenSkin[favSelected + 1] = Game1.player.skin;
+                    this.PlayerConfig.chosenShirt[favSelected + 1] = Game1.player.shirt;
+                    this.PlayerConfig.chosenHairstyle[favSelected + 1] = Game1.player.hair;
+                    this.PlayerConfig.chosenHairColor[favSelected + 1] = Game1.player.hairstyleColor.PackedValue;
+                    this.PlayerConfig.chosenEyeColor[favSelected + 1] = Game1.player.newEyeColor.PackedValue;
+                    this.PlayerConfig.chosenBottomsColor[favSelected + 1] = Game1.player.pantsColor.PackedValue;
 
-                    GetDressed.modHelper.WriteJsonFile(Path.Combine("psconfigs", $"{Constants.SaveFolderName}.json"), GetDressed.currentConfig);
+                    this.ModHelper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
                     //hide New Button
-                    if (GetDressed.globalConfig.showIntroBanner)
+                    if (this.GlobalConfig.showIntroBanner)
                     {
-                        GetDressed.globalConfig.showIntroBanner = false;
-                        GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
+                        this.GlobalConfig.showIntroBanner = false;
+                        this.ModHelper.WriteConfig(this.GlobalConfig);
                     }
 
                     //banana ;)
@@ -867,27 +888,27 @@ namespace GetDressed.Framework
                         return;
                     }
 
-                    changeBottoms(GetDressed.currentConfig.chosenBottoms[favSelected + 1]);
-                    changeAccessory(GetDressed.currentConfig.chosenAccessory[favSelected + 1]);
-                    changeFaceType(GetDressed.currentConfig.chosenFace[favSelected + 1]);
-                    changeNoseType(GetDressed.currentConfig.chosenNose[favSelected + 1]);
-                    changeShoes(GetDressed.currentConfig.chosenShoes[favSelected + 1]);
-                    Game1.player.changeSkinColor(GetDressed.currentConfig.chosenSkin[favSelected + 1]);
-                    Game1.player.changeShirt(GetDressed.currentConfig.chosenShirt[favSelected + 1]);
-                    Game1.player.changeHairStyle(GetDressed.currentConfig.chosenHairstyle[favSelected + 1]);
+                    changeBottoms(this.PlayerConfig.chosenBottoms[favSelected + 1]);
+                    changeAccessory(this.PlayerConfig.chosenAccessory[favSelected + 1]);
+                    changeFaceType(this.PlayerConfig.chosenFace[favSelected + 1]);
+                    changeNoseType(this.PlayerConfig.chosenNose[favSelected + 1]);
+                    changeShoes(this.PlayerConfig.chosenShoes[favSelected + 1]);
+                    Game1.player.changeSkinColor(this.PlayerConfig.chosenSkin[favSelected + 1]);
+                    Game1.player.changeShirt(this.PlayerConfig.chosenShirt[favSelected + 1]);
+                    Game1.player.changeHairStyle(this.PlayerConfig.chosenHairstyle[favSelected + 1]);
 
                     Color haircolorpackedvalue = new Color(0, 0, 0);
-                    haircolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenHairColor[favSelected + 1];
+                    haircolorpackedvalue.PackedValue = this.PlayerConfig.chosenHairColor[favSelected + 1];
                     Game1.player.changeHairColor(haircolorpackedvalue);
                     hairColorPicker.setColor(Game1.player.hairstyleColor);
 
                     Color eyecolorpackedvalue = new Color(0, 0, 0);
-                    eyecolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenEyeColor[favSelected + 1];
+                    eyecolorpackedvalue.PackedValue = this.PlayerConfig.chosenEyeColor[favSelected + 1];
                     Game1.player.changeEyeColor(eyecolorpackedvalue);
                     eyeColorPicker.setColor(Game1.player.newEyeColor);
 
                     Color bottomscolorpackedvalue = new Color(0, 0, 0);
-                    bottomscolorpackedvalue.PackedValue = GetDressed.currentConfig.chosenBottomsColor[favSelected + 1];
+                    bottomscolorpackedvalue.PackedValue = this.PlayerConfig.chosenBottomsColor[favSelected + 1];
                     Game1.player.changePants(bottomscolorpackedvalue);
                     pantsColorPicker.setColor(Game1.player.pantsColor);
                     patchBase();
@@ -917,13 +938,13 @@ namespace GetDressed.Framework
                 }
                 if (hideMaleSkirtsButton.containsPoint(x, y))
                 {
-                    GetDressed.globalConfig.hideMaleSkirts = !GetDressed.globalConfig.hideMaleSkirts;
-                    GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
-                    alerts.Add(new Alert(GetDressed.menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Skirts " + (GetDressed.globalConfig.hideMaleSkirts ? "Hidden" : "Unhidden") + " for Males.", 1200, false));
+                    this.GlobalConfig.hideMaleSkirts = !this.GlobalConfig.hideMaleSkirts;
+                    this.ModHelper.WriteConfig(this.GlobalConfig);
+                    alerts.Add(new Alert(menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Skirts " + (this.GlobalConfig.hideMaleSkirts ? "Hidden" : "Unhidden") + " for Males.", 1200, false));
                     Game1.playSound("coin");
                 }
 
-                if (GetDressed.globalConfig.menuZoomOut)
+                if (this.GlobalConfig.menuZoomOut)
                 {
                     if (zoomInButton.containsPoint(x, y))
                     {
@@ -936,14 +957,14 @@ namespace GetDressed.Framework
                         yPositionOnScreen = Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize;
                         setUpPositions();
 
-                        GetDressed.globalConfig.menuZoomOut = false;
-                        GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
+                        this.GlobalConfig.menuZoomOut = false;
+                        this.ModHelper.WriteConfig(this.GlobalConfig);
 
                         zoomInButton.sourceRect.Y = 177;
                         zoomOutButton.sourceRect.Y = 167;
 
                         Game1.playSound("drumkit6");
-                        alerts.Add(new Alert(GetDressed.menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Zoom Setting Changed.", 1200, false, 200));
+                        alerts.Add(new Alert(menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Zoom Setting Changed.", 1200, false, 200));
                     }
                 }
                 else
@@ -959,21 +980,21 @@ namespace GetDressed.Framework
                         yPositionOnScreen = Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize;
                         setUpPositions();
 
-                        GetDressed.globalConfig.menuZoomOut = true;
-                        GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
+                        this.GlobalConfig.menuZoomOut = true;
+                        this.ModHelper.WriteConfig(this.GlobalConfig);
 
                         zoomInButton.sourceRect.Y = 167;
                         zoomOutButton.sourceRect.Y = 177;
 
                         Game1.playSound("coin");
-                        alerts.Add(new Alert(GetDressed.menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Zoom Setting Changed.", 1200, false, 200));
+                        alerts.Add(new Alert(menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Zoom Setting Changed.", 1200, false, 200));
                     }
                 }
 
                 if (resetConfigButton.containsPoint(x, y))
                 {
-                    GetDressed.globalConfig.hideMaleSkirts = false;
-                    GetDressed.globalConfig.menuAccessKey = "C";
+                    this.GlobalConfig.hideMaleSkirts = false;
+                    this.GlobalConfig.menuAccessKey = "C";
                     Game1.options.zoomLevel = 0.75f;
                     Game1.overrideGameMenuReset = true;
                     //Program.gamePtr.refreshWindowSettings();
@@ -981,9 +1002,9 @@ namespace GetDressed.Framework
                     xPositionOnScreen = Game1.viewport.Width / 2 - (680 + borderWidth * 2) / 2;
                     yPositionOnScreen = Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize;
                     setUpPositions();
-                    GetDressed.globalConfig.menuZoomOut = true;
-                    GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
-                    alerts.Add(new Alert(GetDressed.menuTextures, new Rectangle(160, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Options Reset to Default", 1200, false, 200));
+                    this.GlobalConfig.menuZoomOut = true;
+                    this.ModHelper.WriteConfig(this.GlobalConfig);
+                    alerts.Add(new Alert(menuTextures, new Rectangle(160, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Options Reset to Default", 1200, false, 200));
                     Game1.playSound("coin");
                 }
             }
@@ -1032,7 +1053,7 @@ namespace GetDressed.Framework
             {
                 Game1.exitActiveMenu();
                 Game1.playSound("bigDeSelect");
-                Game1.options.zoomLevel = GetDressed.playerZoomLevel;
+                Game1.options.zoomLevel = this.PlayerZoomLevel;
                 Game1.overrideGameMenuReset = true;
                 //Program.gamePtr.refreshWindowSettings();
                 Game1.game1.refreshWindowSettings();
@@ -1041,10 +1062,10 @@ namespace GetDressed.Framework
 
             if (isCurrentTab(3) && letUserAssignOpenMenuKey)
             {
-                GetDressed.globalConfig.menuAccessKey = key.ToString();
-                GetDressed.modHelper.WriteConfig(GetDressed.globalConfig);
+                this.GlobalConfig.menuAccessKey = key.ToString();
+                this.ModHelper.WriteConfig(this.GlobalConfig);
                 letUserAssignOpenMenuKey = false;
-                alerts.Add(new Alert(GetDressed.menuTextures, new Rectangle(96, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Menu Access Key Changed.", 1200, false));
+                alerts.Add(new Alert(this.ContentHelper.menuTextures, new Rectangle(96, 144, 16, 16), Game1.viewport.Width / 2 - (700 + borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + borderWidth * 2) / 2 - Game1.tileSize, "Menu Access Key Changed.", 1200, false));
                 Game1.playSound("coin");
             }
         }
@@ -1164,7 +1185,7 @@ namespace GetDressed.Framework
                 resetConfigButton.tryHover(x, y, 0.25f);
                 resetConfigButton.tryHover(x, y, 0.25f);
 
-                if (GetDressed.globalConfig.menuZoomOut)
+                if (this.GlobalConfig.menuZoomOut)
                 {
                     zoomInButton.tryHover(x, y, 0.25f);
                     zoomInButton.tryHover(x, y, 0.25f);
@@ -1204,8 +1225,8 @@ namespace GetDressed.Framework
             //SIDE TABS
             if (isCurrentTab(2) || isCurrentTab(4))
             {
-                b.Draw(GetDressed.menuTextures, quickFavorites, new Rectangle?(new Rectangle(52, 202, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom, SpriteEffects.None, 0.0001f);
-                b.Draw(GetDressed.menuTextures, extraFavorites, new Rectangle?(new Rectangle(52, 202, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom, SpriteEffects.None, 0.0001f);
+                b.Draw(this.ContentHelper.menuTextures, quickFavorites, new Rectangle?(new Rectangle(52, 202, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom, SpriteEffects.None, 0.0001f);
+                b.Draw(this.ContentHelper.menuTextures, extraFavorites, new Rectangle?(new Rectangle(52, 202, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom, SpriteEffects.None, 0.0001f);
                 quickFavsIcon.draw(b);
                 extraFavsIcon.draw(b);
             }
@@ -1412,21 +1433,21 @@ namespace GetDressed.Framework
 
                 Utility.drawTextWithShadow(b, "Get Dressed created by JinxieWinxie and Advize", Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 175), Color.Black);
 
-                Utility.drawTextWithShadow(b, "You are using version:  " + GetDressed./*globalConfig.*/versionNumber, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 225), Color.Black);
+                Utility.drawTextWithShadow(b, "You are using version:  " + ModConstants./*globalConfig.*/VersionNumber, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 225), Color.Black);
 
                 StardewValley.BellsAndWhistles.SpriteText.drawString(b, "Settings:", xPositionOnScreen + 55, yPositionOnScreen + 275, 999999, -1, 999999, 1, 0.88f, false, -1, "", -1);
 
-                Utility.drawTextWithShadow(b, "Face Types (M-F): " + GetDressed.globalConfig.maleFaceTypes + "-" + GetDressed.globalConfig.femaleFaceTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 345), Color.Black);
-                Utility.drawTextWithShadow(b, "Nose Types (M-F): " + GetDressed.globalConfig.maleNoseTypes + "-" + GetDressed.globalConfig.femaleNoseTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 345), Color.Black);
+                Utility.drawTextWithShadow(b, "Face Types (M-F): " + this.GlobalConfig.maleFaceTypes + "-" + this.GlobalConfig.femaleFaceTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 345), Color.Black);
+                Utility.drawTextWithShadow(b, "Nose Types (M-F): " + this.GlobalConfig.maleNoseTypes + "-" + this.GlobalConfig.femaleNoseTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 345), Color.Black);
 
-                Utility.drawTextWithShadow(b, "Bottoms Types (M-F): " + (GetDressed.globalConfig.hideMaleSkirts ? 2 : GetDressed.globalConfig.maleBottomsTypes) + "-" + GetDressed.globalConfig.femaleBottomsTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 395), Color.Black);
-                Utility.drawTextWithShadow(b, "Shoes Types (M-F): " + GetDressed.globalConfig.maleShoeTypes + "-" + GetDressed.globalConfig.femaleShoeTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 395), Color.Black);
+                Utility.drawTextWithShadow(b, "Bottoms Types (M-F): " + (this.GlobalConfig.hideMaleSkirts ? 2 : this.GlobalConfig.maleBottomsTypes) + "-" + this.GlobalConfig.femaleBottomsTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 395), Color.Black);
+                Utility.drawTextWithShadow(b, "Shoes Types (M-F): " + this.GlobalConfig.maleShoeTypes + "-" + this.GlobalConfig.femaleShoeTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 395), Color.Black);
 
-                Utility.drawTextWithShadow(b, "Show Dresser: " + GetDressed.globalConfig.showDresser, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 445), Color.Black);
-                Utility.drawTextWithShadow(b, "Stove in Corner: " + GetDressed.globalConfig.stoveInCorner, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 445), Color.Black);
+                Utility.drawTextWithShadow(b, "Show Dresser: " + this.GlobalConfig.showDresser, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 445), Color.Black);
+                Utility.drawTextWithShadow(b, "Stove in Corner: " + this.GlobalConfig.stoveInCorner, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 445), Color.Black);
 
                 //Set Menu Access Key
-                Utility.drawTextWithShadow(b, "Open Menu Key:  " + GetDressed.globalConfig.menuAccessKey, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 525), Color.Black);
+                Utility.drawTextWithShadow(b, "Open Menu Key:  " + this.GlobalConfig.menuAccessKey, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 525), Color.Black);
                 setNewMenuAccessKeyButton.draw(b);
 
                 //Set If Male Characters should have access to skirts
@@ -1452,7 +1473,7 @@ namespace GetDressed.Framework
             #endregion
 
             //Draw Temporary Animated Sprites
-            if (GetDressed.globalConfig.showIntroBanner && floatingNewButton != null)
+            if (this.GlobalConfig.showIntroBanner && floatingNewButton != null)
             {
                 floatingNewButton.draw(b, true, 400, 950);
             }
@@ -1479,14 +1500,14 @@ namespace GetDressed.Framework
             }
             else
             {
-                b.Draw(GetDressed.menuTextures, new Vector2(Game1.getOldMouseX(), Game1.getOldMouseY()), new Rectangle?(Game1.getSourceRectForStandardTileSheet(Game1.mouseCursors, 6, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom + Game1.dialogueButtonScale / 150f, SpriteEffects.None, 1f);
+                b.Draw(this.ContentHelper.menuTextures, new Vector2(Game1.getOldMouseX(), Game1.getOldMouseY()), new Rectangle?(Game1.getSourceRectForStandardTileSheet(Game1.mouseCursors, 6, 16, 16)), Color.White, 0f, Vector2.Zero, Game1.pixelZoom + Game1.dialogueButtonScale / 150f, SpriteEffects.None, 1f);
             }
 
             //Draw Tooltips
             drawHoverText(b, hoverText, Game1.smallFont, flag ? 0 : 20, flag ? 0 : 20, -1, null, -1, null, null, 0, -1, -1, -1, -1, 1f, null);
         }
 
-        public void changeAccessory(int which)
+        private void changeAccessory(int which)
         {
             if (which < -1)
             {
@@ -1513,13 +1534,13 @@ namespace GetDressed.Framework
             }
         }
 
-        public void changeFaceType(int which, bool noPatch = false)
+        private void changeFaceType(int which, bool noPatch = false)
         {
             if (which < 0)
             {
-                which = (Game1.player.isMale ? GetDressed.globalConfig.maleFaceTypes : GetDressed.globalConfig.femaleFaceTypes) - 1;
+                which = (Game1.player.isMale ? this.GlobalConfig.maleFaceTypes : this.GlobalConfig.femaleFaceTypes) - 1;
             }
-            if (which >= (Game1.player.isMale ? GetDressed.globalConfig.maleFaceTypes : GetDressed.globalConfig.femaleFaceTypes))
+            if (which >= (Game1.player.isMale ? this.GlobalConfig.maleFaceTypes : this.GlobalConfig.femaleFaceTypes))
             {
                 which = 0;
             }
@@ -1528,13 +1549,13 @@ namespace GetDressed.Framework
             patchBase();
         }
 
-        public void changeNoseType(int which, bool noPatch = false)
+        private void changeNoseType(int which, bool noPatch = false)
         {
             if (which < 0)
             {
-                which = (Game1.player.isMale ? GetDressed.globalConfig.maleNoseTypes : GetDressed.globalConfig.femaleNoseTypes) - 1;
+                which = (Game1.player.isMale ? this.GlobalConfig.maleNoseTypes : this.GlobalConfig.femaleNoseTypes) - 1;
             }
-            if (which >= (Game1.player.isMale ? GetDressed.globalConfig.maleNoseTypes : GetDressed.globalConfig.femaleNoseTypes))
+            if (which >= (Game1.player.isMale ? this.GlobalConfig.maleNoseTypes : this.GlobalConfig.femaleNoseTypes))
             {
                 which = 0;
             }
@@ -1543,13 +1564,13 @@ namespace GetDressed.Framework
             patchBase();
         }
 
-        public void changeBottoms(int which, bool noPatch = false)
+        private void changeBottoms(int which, bool noPatch = false)
         {
             if (which < 0)
             {
-                which = (Game1.player.isMale ? (GetDressed.globalConfig.hideMaleSkirts ? 2 : GetDressed.globalConfig.maleBottomsTypes) : GetDressed.globalConfig.femaleBottomsTypes) - 1;
+                which = (Game1.player.isMale ? (this.GlobalConfig.hideMaleSkirts ? 2 : this.GlobalConfig.maleBottomsTypes) : this.GlobalConfig.femaleBottomsTypes) - 1;
             }
-            if (which >= (Game1.player.isMale ? (GetDressed.globalConfig.hideMaleSkirts ? 2 : GetDressed.globalConfig.maleBottomsTypes) : GetDressed.globalConfig.femaleBottomsTypes))
+            if (which >= (Game1.player.isMale ? (this.GlobalConfig.hideMaleSkirts ? 2 : this.GlobalConfig.maleBottomsTypes) : this.GlobalConfig.femaleBottomsTypes))
             {
                 which = 0;
             }
@@ -1558,13 +1579,13 @@ namespace GetDressed.Framework
             patchBase();
         }
 
-        public void changeShoes(int which, bool noPatch = false)
+        private void changeShoes(int which, bool noPatch = false)
         {
             if (which < 0)
             {
-                which = (Game1.player.isMale ? GetDressed.globalConfig.maleShoeTypes : GetDressed.globalConfig.femaleShoeTypes) - 1;
+                which = (Game1.player.isMale ? this.GlobalConfig.maleShoeTypes : this.GlobalConfig.femaleShoeTypes) - 1;
             }
-            if (which >= (Game1.player.isMale ? GetDressed.globalConfig.maleShoeTypes : GetDressed.globalConfig.femaleShoeTypes))
+            if (which >= (Game1.player.isMale ? this.GlobalConfig.maleShoeTypes : this.GlobalConfig.femaleShoeTypes))
             {
                 which = 0;
             }
@@ -1573,40 +1594,40 @@ namespace GetDressed.Framework
             patchBase();
         }
 
-        public void changeGender(bool male)
+        private void changeGender(bool male)
         {
             if (male)
             {
                 Game1.player.isMale = true;
-                Game1.player.FarmerRenderer.baseTexture = GetDressed.InitTexture(true);
+                Game1.player.FarmerRenderer.baseTexture = this.ContentHelper.InitTexture(true);
                 Game1.player.FarmerRenderer.heightOffset = 0;
             }
             else
             {
                 Game1.player.isMale = false;
                 Game1.player.FarmerRenderer.heightOffset = 4;
-                Game1.player.FarmerRenderer.baseTexture = GetDressed.InitTexture(false);
+                Game1.player.FarmerRenderer.baseTexture = this.ContentHelper.InitTexture(false);
             }
             faceType = noseType = bottoms = shoes = 0;
-            GetDressed.FixFarmerEffects(Game1.player);
+            this.ContentHelper.FixFarmerEffects(Game1.player);
         }
 
-        public void patchBase()
+        private void patchBase()
         {
             string texturePath = (Game1.player.isMale ? "male_" : "female_");
-            Game1.player.FarmerRenderer.baseTexture = GetDressed.InitTexture(Game1.player.isMale);
-            GetDressed.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "faces.png", faceType * (Game1.player.isMale ? GetDressed.globalConfig.maleNoseTypes : GetDressed.globalConfig.femaleNoseTypes) + noseType + (shoes * ((Game1.player.isMale ? GetDressed.globalConfig.maleNoseTypes : GetDressed.globalConfig.femaleNoseTypes) * (Game1.player.isMale ? GetDressed.globalConfig.maleFaceTypes : GetDressed.globalConfig.femaleFaceTypes))), 0);
-            GetDressed.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "bottoms.png", bottoms, 3);
-            GetDressed.FixFarmerEffects(Game1.player);
+            Game1.player.FarmerRenderer.baseTexture = this.ContentHelper.InitTexture(Game1.player.isMale);
+            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "faces.png", faceType * (Game1.player.isMale ? this.GlobalConfig.maleNoseTypes : this.GlobalConfig.femaleNoseTypes) + noseType + (shoes * ((Game1.player.isMale ? this.GlobalConfig.maleNoseTypes : this.GlobalConfig.femaleNoseTypes) * (Game1.player.isMale ? this.GlobalConfig.maleFaceTypes : this.GlobalConfig.femaleFaceTypes))), 0);
+            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "bottoms.png", bottoms, 3);
+            this.ContentHelper.FixFarmerEffects(Game1.player);
         }
 
         private bool favoriteExists(int favoriteSlot)
         {
-            if (favoriteSlot < 0 || favoriteSlot > GetDressed.currentConfig.chosenEyeColor.Count())
+            if (favoriteSlot < 0 || favoriteSlot > this.PlayerConfig.chosenEyeColor.Count())
             {
                 return false;
             }
-            return GetDressed.currentConfig.chosenEyeColor[favoriteSlot] != 0;
+            return this.PlayerConfig.chosenEyeColor[favoriteSlot] != 0;
         }
 
         private bool isCurrentTab(int t)
