@@ -16,5 +16,8 @@ namespace GetDressed
 
         /// <summary>The game's current zoom level.</summary>
         public static float ZoomLevel = Game1.options.zoomLevel;
+
+        /// <summary>The maximum number of favourites.</summary>
+        public const int MaxFavorites = 37;
     }
 }

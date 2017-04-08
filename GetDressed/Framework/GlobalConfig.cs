@@ -1,40 +1,51 @@
 ﻿namespace GetDressed.Framework
 {
+    /// <summary>The JSON model for global settings read from the mod's config file.</summary>
     public class GlobalConfig
     {
-        public string versionNumber { get; set; }
-        public string menuAccessKey { get; set; }
-        public bool showIntroBanner { get; set; }
-        public bool showDresser { get; set; }
-        public int maleFaceTypes { get; set; }
-        public int maleNoseTypes { get; set; }
-        public int maleBottomsTypes { get; set; }
-        public int maleShoeTypes { get; set; }
-        public int femaleFaceTypes { get; set; }
-        public int femaleNoseTypes { get; set; }
-        public int femaleBottomsTypes { get; set; }
-        public int femaleShoeTypes { get; set; }
-        public bool stoveInCorner { get; set; }
-        public bool hideMaleSkirts { get; set; }
-        public bool menuZoomOut { get; set; }
+        /// <summary>The mod version number.</summary>
+        public string VersionNumber { get; set; } = "3.2";
 
-        public GlobalConfig()
-        {
-            versionNumber = "3.2";
-            menuAccessKey = "C";
-            showIntroBanner = true;
-            showDresser = true;
-            maleFaceTypes = 2;
-            maleNoseTypes = 3;
-            maleBottomsTypes = 6;
-            maleShoeTypes = 2;
-            femaleFaceTypes = 2;
-            femaleNoseTypes = 3;
-            femaleBottomsTypes = 12;
-            femaleShoeTypes = 4;
-            stoveInCorner = false;
-            hideMaleSkirts = false;
-            menuZoomOut = true;
-        }
+        /// <summary>The keyboard button which opens the menu.</summary>
+        public string MenuAccessKey { get; set; } = "C";
+
+        /// <summary>Whether to show the 'new' button next to the customisation menu tabs. This is automatically disabled after the player sees the menu once.</summary>
+        public bool ShowIntroBanner { get; set; } = true;
+
+        /// <summary>Whether to show patch the dresser into the farmhouse.</summary>
+        public bool ShowDresser { get; set; } = true;
+
+        /// <summary>The number of male faces available.</summary>
+        public int MaleFaceTypes { get; set; } = 2;
+
+        /// <summary>The number of male noses available.</summary>
+        public int MaleNoseTypes { get; set; } = 3;
+
+        /// <summary>The number of male bottoms available.</summary>
+        public int MaleBottomsTypes { get; set; } = 6;
+
+        /// <summary>The number of male shoes available.</summary>
+        public int MaleShoeTypes { get; set; } = 2;
+
+        /// <summary>The number of female faces available.</summary>
+        public int FemaleFaceTypes { get; set; } = 2;
+
+        /// <summary>The number of female noses available.</summary>
+        public int FemaleNoseTypes { get; set; } = 3;
+
+        /// <summary>The number of female bottoms available.</summary>
+        public int FemaleBottomsTypes { get; set; } = 12;
+
+        /// <summary>The number of female shoes available.</summary>
+        public int FemaleShoeTypes { get; set; } = 4;
+
+        /// <summary>Whether to move the dresser for compatibility with another mod that adds a stove in the same spot.</summary>
+        public bool StoveInCorner { get; set; }
+
+        /// <summary>Whether to hide the skirt options for male characters.</summary>
+        public bool HideMaleSkirts { get; set; }
+
+        /// <summary>Whether to temporarily zoom out when showing the menu.</summary>
+        public bool MenuZoomOut { get; set; } = true;
     }
 }

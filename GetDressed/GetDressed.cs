@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using GetDressed.Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,398 +12,375 @@ using StardewValley;
 using StardewValley.Locations;
 using StardewValley.Menus;
 using xTile.Display;
+using xTile.Layers;
 using xTile.Tiles;
 using Tile = GetDressed.Framework.Tile;
 
 namespace GetDressed
 {
+    /// <summary>The main entry point.</summary>
     public class GetDressed : Mod
     {
+        /*********
+        ** Properties
+        *********/
+        /// <summary>Encapsulates the underlying mod texture management.</summary>
         private ContentHelper ContentHelper;
+
+        /// <summary>The current per-save config settings.</summary>
         private LocalConfig PlayerConfig;
+
+        /// <summary>The global config settings.</summary>
         private GlobalConfig GlobalConfig;
 
-        private bool titleSubMenuChanged = false;
-        private IClickableMenu previousSubMenu = null;
-        private List<Farmer> farmers = new List<Farmer>();
-        private List<LocalConfig> farmerConfigs = new List<LocalConfig>();
-        private int loadtime = 0;
+        /// <summary>Whether the mod is initialised.</summary>
+        private bool IsInitialised => this.ContentHelper != null;
 
+        /// <summary>Whether the game world is loaded and ready.</summary>
+        private bool IsLoaded => this.IsInitialised && Game1.hasLoadedGame;
+
+        /// <summary>Whether this is the first day since the player loaded their save.</summary>
+        private bool IsFirstDay = true;
+
+        /// <summary>The last patched load menu, if the game hasn't loaded yet.</summary>
+        private IClickableMenu PreviousLoadMenu;
+
+        /// <summary>The farmer data for all saves, if the game hasn't loaded yet.</summary>
+        private Farmer[] Farmers = new Farmer[0];
+
+        /// <summary>The per-save configs for all saves, if the game hasn't loaded yet.</summary>
+        private LocalConfig[] FarmerConfigs = new LocalConfig[0];
+
+
+        /*********
+        ** Public methods
+        *********/
+        /// <summary>The mod entry point, called after the mod is first loaded.</summary>
+        /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
-            this.ContentHelper = new ContentHelper(helper, this.Monitor);
-
-            ControlEvents.MouseChanged += Event_MouseChanged;
-            ControlEvents.ControllerButtonPressed += Event_ControllerButtonPressed;
-            GameEvents.UpdateTick += Event_UpdateTick;
-            TimeEvents.DayOfMonthChanged += Event_DayOfMonthChanged;
             this.GlobalConfig = helper.ReadConfig<GlobalConfig>();
-            ControlEvents.KeyPressed += Event_KeyPressed;
+
+            GameEvents.LoadContent += this.GameEvents_LoadContent;
+            SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
+            TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
+
+            ControlEvents.MouseChanged += this.Event_MouseChanged;
+            ControlEvents.ControllerButtonPressed += this.Event_ControllerButtonPressed;
+            GameEvents.UpdateTick += this.Event_UpdateTick;
+            ControlEvents.KeyPressed += this.Event_KeyPressed;
         }
 
-        private void Event_MouseChanged(object sender, EventArgsMouseStateChanged e)
+
+        /*********
+        ** Private methods
+        *********/
+        /// <summary>The event handler called when the mouse state changes.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void GameEvents_LoadContent(object sender, EventArgs e)
         {
-            if (!Game1.hasLoadedGame) return;
-            if (e.NewState.RightButton == ButtonState.Pressed && e.PriorState.RightButton != ButtonState.Pressed)
-            {
-                CheckForAction();
-            }
+            // load content manager
+            this.ContentHelper = new ContentHelper(this.Helper, this.Monitor, Game1.content.ServiceProvider);
+
+            // load per-save configs
+            this.FarmerConfigs = this
+                .ReadLocalConfigs()
+                .OrderBy(config => config.SaveTime)
+                .ToArray();
         }
 
-        private void Event_ControllerButtonPressed(object sender, EventArgsControllerButtonPressed e)
-        {
-            if (!Game1.hasLoadedGame) return;
-            if (e.ButtonPressed == Buttons.A)
-            {
-                CheckForAction();
-            }
-        }
-
-        private void Event_KeyPressed(object sender, EventArgsKeyPressed e)
-        {
-            if (e.KeyPressed.ToString().Equals(this.GlobalConfig.menuAccessKey))
-            {
-                Game1.player.completelyStopAnimatingOrDoingAction();
-
-                if (Game1.hasLoadedGame && Game1.activeClickableMenu == null && this.PlayerConfig != null)
-                {
-                    Game1.playSound("bigDeSelect");
-                    Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
-                }
-            }
-        }
-
-        private void CheckForAction()
-        {
-            if (!Game1.player.UsingTool && !Game1.pickingTool && !Game1.menuUp && (!Game1.eventUp || Game1.currentLocation.currentEvent.playerControlSequence) && !Game1.nameSelectUp && Game1.numberOfSelectedItems == -1 && !Game1.fadeToBlack && Game1.activeClickableMenu == null)
-            {
-                Vector2 grabTile = new Vector2(Game1.getOldMouseX() + Game1.viewport.X, Game1.getOldMouseY() + Game1.viewport.Y) / Game1.tileSize;
-                if (!Utility.tileWithinRadiusOfPlayer((int)grabTile.X, (int)grabTile.Y, 1, Game1.player))
-                {
-                    grabTile = Game1.player.GetGrabTile();
-                }
-                xTile.Tiles.Tile tile = Game1.currentLocation.map.GetLayer("Buildings").PickTile(new xTile.Dimensions.Location((int)grabTile.X * Game1.tileSize, (int)grabTile.Y * Game1.tileSize), Game1.viewport.Size);
-                xTile.ObjectModel.PropertyValue propertyValue = null;
-                if (tile != null)
-                {
-                    tile.Properties.TryGetValue("Action", out propertyValue);
-                }
-                if (propertyValue != null)
-                {
-                    if (propertyValue == "GetDressed")
-                    {
-                        Game1.playSound("bigDeSelect");
-                        Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
-                    }
-                }
-            }
-        }
-
+        /// <summary>The event handler called when the game updates its state.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
         private void Event_UpdateTick(object sender, EventArgs e)
         {
-            if (!this.ContentHelper.IsInitialised)
-                this.ContentHelper.InitializeContent(Game1.content.ServiceProvider);
-
-            if (!Game1.hasLoadedGame)
+            // patch load menu
+            if (this.IsInitialised && !Game1.hasLoadedGame)
             {
-                FixLoadGameMenu();
+                this.PatchLoadMenu();
                 return;
             }
-            farmers.Clear();
-            farmerConfigs.Clear();
 
-            if (string.IsNullOrEmpty(ModConstants.PerSaveConfigPath))
-                return;
-
-            GameEvents.EighthUpdateTick += Event_EightUpdateTick;
-            GameEvents.UpdateTick -= Event_UpdateTick;
+            // remove load menu patcher
+            this.Farmers = new Farmer[0];
+            this.FarmerConfigs = new LocalConfig[0];
+            if (!string.IsNullOrEmpty(ModConstants.PerSaveConfigPath))
+                GameEvents.UpdateTick -= Event_UpdateTick;
         }
 
-        private void Event_EightUpdateTick(object sender, EventArgs e)
+        /// <summary>The event handler called when the player loads a save and the world is ready.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
-            if (Game1.player.currentLocation != Game1.getLocationFromName("FarmHouse")) return;
+            // load config
+            this.PlayerConfig = this.Helper.ReadJsonFile<LocalConfig>(ModConstants.PerSaveConfigPath) ?? new LocalConfig();
 
-            loadtime++;
-            //Log.SyncColour("LOADTIME NUMBER " + loadtime, ConsoleColor.Cyan);
-            if (loadtime > 5)
+            // patch player textures
+            Texture2D playerTextures = this.ContentHelper.GetBaseFarmerTexture(Game1.player.isMale);
+            if (Game1.player.isMale)
             {
-                FarmHouse fh = Game1.getLocationFromName("FarmHouse") as FarmHouse;
+                this.ContentHelper.PatchTexture(ref playerTextures, "male_faces.png", this.PlayerConfig.ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + this.PlayerConfig.ChosenNose[0] + (this.PlayerConfig.ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, "male_bottoms.png", (this.PlayerConfig.ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : this.PlayerConfig.ChosenBottoms[0], 3);
+            }
+            else
+            {
+                this.ContentHelper.PatchTexture(ref playerTextures, "female_faces.png", this.PlayerConfig.ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + this.PlayerConfig.ChosenNose[0] + (this.PlayerConfig.ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, "female_bottoms.png", this.PlayerConfig.ChosenBottoms[0], 3);
+            }
+            this.ContentHelper.PatchFarmerRenderer(Game1.player, playerTextures);
 
-                if (SaveGame.loaded != null)
+            // update config on first run
+            if (this.PlayerConfig.FirstRun)
+            {
+                this.PlayerConfig.ChosenAccessory[0] = Game1.player.accessory;
+                this.PlayerConfig.FirstRun = false;
+                this.Helper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
+            }
+            else
+                Game1.player.accessory = this.PlayerConfig.ChosenAccessory[0];
+
+            // patch farmhouse tilesheet
+            FarmHouse farmhouse = (FarmHouse)Game1.getLocationFromName("FarmHouse");
+            this.PatchFarmhouseTilesheet(farmhouse);
+        }
+
+        /// <summary>The event handler called when the mouse state changes.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void TimeEvents_AfterDayStarted(object sender, EventArgs e)
+        {
+            FarmHouse farmhouse = (FarmHouse)Game1.getLocationFromName("FarmHouse");
+            if (this.IsFirstDay || farmhouse.upgradeLevel != this.Helper.Reflection.GetPrivateValue<int>(farmhouse, "currentlyDisplayedUpgradeLevel"))
+                this.PatchFarmhouseMap(farmhouse);
+            this.IsFirstDay = false;
+        }
+
+        /// <summary>The event handler called when the mouse state changes.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void Event_MouseChanged(object sender, EventArgsMouseStateChanged e)
+        {
+            if (!this.IsLoaded)
+                return;
+
+            if (e.NewState.RightButton == ButtonState.Pressed && e.PriorState.RightButton != ButtonState.Pressed)
+                this.CheckForAction();
+        }
+
+        /// <summary>The event handler called when the player presses a controller button.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void Event_ControllerButtonPressed(object sender, EventArgsControllerButtonPressed e)
+        {
+            if (!this.IsLoaded)
+                return;
+
+            if (e.ButtonPressed == Buttons.A)
+                this.CheckForAction();
+        }
+
+        /// <summary>The event handler called when the player presses a keyboard button.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void Event_KeyPressed(object sender, EventArgsKeyPressed e)
+        {
+            if (!this.IsLoaded || Game1.activeClickableMenu != null)
+                return;
+
+            if (e.KeyPressed.ToString() == this.GlobalConfig.MenuAccessKey)
+            {
+                Game1.player.completelyStopAnimatingOrDoingAction();
+                Game1.playSound("bigDeSelect");
+                Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
+            }
+        }
+
+        /// <summary>Open the customisation menu if the player activated the dresser.</summary>
+        private void CheckForAction()
+        {
+            if (Game1.player.UsingTool || Game1.pickingTool || Game1.menuUp || (Game1.eventUp && !Game1.currentLocation.currentEvent.playerControlSequence) || Game1.nameSelectUp || Game1.numberOfSelectedItems != -1 || Game1.fadeToBlack || Game1.activeClickableMenu != null)
+                return;
+
+            // get the activated tile
+            Vector2 grabTile = new Vector2(Game1.getOldMouseX() + Game1.viewport.X, Game1.getOldMouseY() + Game1.viewport.Y) / Game1.tileSize;
+            if (!Utility.tileWithinRadiusOfPlayer((int)grabTile.X, (int)grabTile.Y, 1, Game1.player))
+                grabTile = Game1.player.GetGrabTile();
+
+            // check tile action
+            xTile.Tiles.Tile tile = Game1.currentLocation.map.GetLayer("Buildings").PickTile(new xTile.Dimensions.Location((int)grabTile.X * Game1.tileSize, (int)grabTile.Y * Game1.tileSize), Game1.viewport.Size);
+            xTile.ObjectModel.PropertyValue propertyValue = null;
+            tile?.Properties.TryGetValue("Action", out propertyValue);
+            if (propertyValue?.ToString() != "GetDressed")
+                return;
+
+            // open menu
+            Game1.playSound("bigDeSelect");
+            Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
+        }
+
+        /// <summary>Patch the textures in the load menu if it's active.</summary>
+        private void PatchLoadMenu()
+        {
+            if (!(Game1.activeClickableMenu is TitleMenu titleMenu))
+                return;
+
+            // get load menu
+            LoadGameMenu loadMenu = this.Helper.Reflection.GetPrivateValue<IClickableMenu>(titleMenu, "subMenu") as LoadGameMenu;
+            if (loadMenu == null || loadMenu == this.PreviousLoadMenu)
+                return;
+            this.PreviousLoadMenu = loadMenu;
+
+            // skip if loading
+            if (this.Helper.Reflection.GetPrivateValue<bool>(loadMenu, "loading"))
+                return;
+
+            // override load-game textures
+            if (this.Farmers.Length < 1)
+            {
+                this.Farmers = this.Helper.Reflection.GetPrivateValue<List<Farmer>>(loadMenu, "saveGames").ToArray();
+                if (this.Farmers.Length != this.FarmerConfigs.Length)
                 {
-                    if (fh.upgradeLevel != SaveGame.loaded.player.houseUpgradeLevel)
-                        return;
+                    this.Monitor.Log("GetDressed could not load per-save configs.", LogLevel.Error);
+                    return;
                 }
 
-                this.PlayerConfig = this.Helper.ReadJsonFile<LocalConfig>(ModConstants.PerSaveConfigPath) ?? new LocalConfig();
+                // override textures
+                for (int i = 0; i < this.Farmers.Length; i++)
+                {
+                    if (this.FarmerConfigs[i].FirstRun)
+                    {
+                        this.FarmerConfigs[i].ChosenAccessory[0] = this.Farmers[i].accessory;
+                        this.FarmerConfigs[i].FirstRun = false;
+                        this.Helper.WriteJsonFile(Path.Combine("psconfigs", $"{this.FarmerConfigs[i].SaveName}.json"), this.FarmerConfigs[i]);
+                    }
+                    Texture2D farmerBase = this.ContentHelper.GetBaseFarmerTexture(this.Farmers[i].isMale);
+                    if (this.Farmers[i].isMale)
+                    {
+                        this.ContentHelper.PatchTexture(ref farmerBase, "male_faces.png", this.FarmerConfigs[i].ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + this.FarmerConfigs[i].ChosenNose[0] + (this.FarmerConfigs[i].ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
+                        this.ContentHelper.PatchTexture(ref farmerBase, "male_bottoms.png", (this.FarmerConfigs[i].ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : this.FarmerConfigs[i].ChosenBottoms[0], 3);
+                    }
+                    else
+                    {
+                        this.ContentHelper.PatchTexture(ref farmerBase, "female_faces.png", this.FarmerConfigs[i].ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + this.FarmerConfigs[i].ChosenNose[0] + (this.FarmerConfigs[i].ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
+                        this.ContentHelper.PatchTexture(ref farmerBase, "female_bottoms.png", this.FarmerConfigs[i].ChosenBottoms[0], 3);
+                    }
+                    this.ContentHelper.PatchFarmerRenderer(this.Farmers[i], farmerBase);
+                    this.Farmers[i].accessory = this.FarmerConfigs[i].ChosenAccessory[0];
+                }
+            }
 
-                Texture2D farmer_base = this.ContentHelper.InitTexture(Game1.player.isMale);
-                if (Game1.player.isMale)
-                {
-                    this.ContentHelper.PatchTexture(ref farmer_base, "male_faces.png", this.PlayerConfig.chosenFace[0] * this.GlobalConfig.maleNoseTypes + this.PlayerConfig.chosenNose[0] + (this.PlayerConfig.chosenShoes[0] * (this.GlobalConfig.maleNoseTypes * this.GlobalConfig.maleFaceTypes)), 0);
-                    this.ContentHelper.PatchTexture(ref farmer_base, "male_bottoms.png", (this.PlayerConfig.chosenBottoms[0] >= this.GlobalConfig.maleBottomsTypes) ? 0 : this.PlayerConfig.chosenBottoms[0], 3);
-                }
-                else
-                {
-                    this.ContentHelper.PatchTexture(ref farmer_base, "female_faces.png", this.PlayerConfig.chosenFace[0] * this.GlobalConfig.femaleNoseTypes + this.PlayerConfig.chosenNose[0] + (this.PlayerConfig.chosenShoes[0] * (this.GlobalConfig.femaleNoseTypes * this.GlobalConfig.femaleFaceTypes)), 0);
-                    this.ContentHelper.PatchTexture(ref farmer_base, "female_bottoms.png", this.PlayerConfig.chosenBottoms[0], 3);
-                }
-                this.ContentHelper.PatchFarmerRenderer(Game1.player, farmer_base);
+            // inject new farmers
+            this.Helper.Reflection
+                .GetPrivateField<List<Farmer>>(loadMenu, "saveGames")
+                .SetValue(this.Farmers.ToList());
+        }
 
-                if (this.PlayerConfig.firstRun)
-                {
-                    this.PlayerConfig.chosenAccessory[0] = Game1.player.accessory;
-                    this.PlayerConfig.firstRun = false;
-                    this.Helper.WriteJsonFile(ModConstants.PerSaveConfigPath, this.PlayerConfig);
-                }
-                else
-                {
-                    Game1.player.accessory = this.PlayerConfig.chosenAccessory[0];
-                }
+        /// <summary>Read all per-save configs from disk.</summary>
+        private IEnumerable<LocalConfig> ReadLocalConfigs()
+        {
+            // get saves path
+            string savePath = Constants.SavesPath;
+            if (!Directory.Exists(savePath))
+                yield break;
 
+            // get save names
+            string[] directories = Directory.GetDirectories(savePath);
+            if (!directories.Any())
+                yield break;
+
+            // get per-save configs
+            foreach (string saveDir in directories)
+            {
+                // get farmer info
+                Farmer farmer;
                 try
                 {
-                    PatchTileSheet();
-                }
-                finally
-                {
-                    PatchMap(fh);
-                }
-
-                GameEvents.EighthUpdateTick -= Event_EightUpdateTick;
-            }
-        }
-
-        private void Event_DayOfMonthChanged(object sender, EventArgs e)
-        {
-            int displayedUpgradeLevel = (int)typeof(FarmHouse).GetField("currentlyDisplayedUpgradeLevel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(((FarmHouse)Game1.getLocationFromName("FarmHouse")));
-
-            if (((FarmHouse)Game1.getLocationFromName("FarmHouse")).upgradeLevel != displayedUpgradeLevel)
-            {
-                GameEvents.SecondUpdateTick += Event_SecondUpdateTick;
-            }
-        }
-
-        private void Event_SecondUpdateTick(object sender, EventArgs e)
-        {
-            int displayedUpgradeLevel = (int)typeof(FarmHouse).GetField("currentlyDisplayedUpgradeLevel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(((FarmHouse)Game1.getLocationFromName("FarmHouse")));
-            if (((FarmHouse)Game1.getLocationFromName("FarmHouse")).upgradeLevel != displayedUpgradeLevel) return;
-
-            PatchMap(Game1.getLocationFromName("FarmHouse") as FarmHouse);
-            GameEvents.SecondUpdateTick -= Event_SecondUpdateTick;
-        }
-
-        private void FixLoadGameMenu()
-        {
-            if (!(Game1.activeClickableMenu is TitleMenu)) return;
-
-            IClickableMenu currentSubMenu = (IClickableMenu)typeof(TitleMenu).GetField("subMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Game1.activeClickableMenu);
-
-            if (currentSubMenu != previousSubMenu)
-                titleSubMenuChanged = true;
-
-            if (currentSubMenu != null)
-            {
-                previousSubMenu = currentSubMenu;
-                if (currentSubMenu is LoadGameMenu && titleSubMenuChanged)
-                {
-                    bool loading = (bool)typeof(LoadGameMenu).GetField("loading", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(currentSubMenu);
-                    if (loading) return;
-
-                    if (farmers.Count < 1)
+                    using (Stream stream = File.Open(Path.Combine(savePath, saveDir, "SaveGameInfo"), FileMode.Open))
                     {
-                        GetFarmerConfigs();
-                        farmers = (List<Farmer>)typeof(LoadGameMenu).GetField("saveGames", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(currentSubMenu);
-                        if (farmers.Count != farmerConfigs.Count)
-                        {
-                            Monitor.Log("GetDressed could not load per-save configs", LogLevel.Error);
-                            return;
-                        }
-                        for (int i = 0; i < farmers.Count; i++)
-                        {
-                            if (farmerConfigs[i].firstRun)
-                            {
-                                farmerConfigs[i].chosenAccessory[0] = farmers[i].accessory;
-                                farmerConfigs[i].firstRun = false;
-                                Helper.WriteJsonFile(Path.Combine("psconfigs", $"{farmerConfigs[i].saveName}.json"), farmerConfigs[i]);
-                            }
-                            Texture2D farmer_base = this.ContentHelper.InitTexture(farmers[i].isMale);
-                            if (farmers[i].isMale)
-                            {
-                                this.ContentHelper.PatchTexture(ref farmer_base, "male_faces.png", farmerConfigs[i].chosenFace[0] * this.GlobalConfig.maleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (this.GlobalConfig.maleNoseTypes * this.GlobalConfig.maleFaceTypes)), 0);
-                                this.ContentHelper.PatchTexture(ref farmer_base, "male_bottoms.png", (farmerConfigs[i].chosenBottoms[0] >= this.GlobalConfig.maleBottomsTypes) ? 0 : farmerConfigs[i].chosenBottoms[0], 3);
-                            }
-                            else
-                            {
-                                this.ContentHelper.PatchTexture(ref farmer_base, "female_faces.png", farmerConfigs[i].chosenFace[0] * this.GlobalConfig.femaleNoseTypes + farmerConfigs[i].chosenNose[0] + (farmerConfigs[i].chosenShoes[0] * (this.GlobalConfig.femaleNoseTypes * this.GlobalConfig.femaleFaceTypes)), 0);
-                                this.ContentHelper.PatchTexture(ref farmer_base, "female_bottoms.png", farmerConfigs[i].chosenBottoms[0], 3);
-                            }
-                            this.ContentHelper.PatchFarmerRenderer(farmers[i], farmer_base);
-                            farmers[i].accessory = farmerConfigs[i].chosenAccessory[0];
-                        }
-                    }
-
-                    typeof(LoadGameMenu).GetField("saveGames", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(currentSubMenu, farmers);
-                    titleSubMenuChanged = false;
-                }
-            }
-        }
-
-        private void GetFarmerConfigs()
-        {
-            string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StardewValley", "Saves");
-            if (Directory.Exists(savePath))
-            {
-                string[] directories = Directory.GetDirectories(savePath);
-                if (directories.Count() > 0)
-                {
-                    for (int j = 0; j < directories.Length; j++)
-                    {
-                        try
-                        {
-                            Stream stream = null;
-                            try
-                            {
-                                stream = File.Open(Path.Combine(savePath, directories[j], "SaveGameInfo"), FileMode.Open);
-                            }
-                            catch (IOException)
-                            {
-                                if (stream != null)
-                                {
-                                    stream.Close();
-                                }
-                            }
-                            if (stream != null)
-                            {
-                                Farmer farmer = (Farmer)SaveGame.farmerSerializer.Deserialize(stream);
-                                SaveGame.loadDataToFarmer(farmer, farmer);
-                                LocalConfig farmerConfig = Helper.ReadJsonFile<LocalConfig>(Path.Combine("psconfigs", $"{new DirectoryInfo(directories[j]).Name}.json")) ?? null;
-                                if (farmerConfig == null)
-                                {
-                                    farmerConfig = new LocalConfig();
-                                    Helper.WriteJsonFile(Path.Combine("psconfigs", $"{new DirectoryInfo(directories[j]).Name}.json"), farmerConfig);
-                                }
-                                farmerConfig.saveTime = farmer.saveTime;
-                                farmerConfig.saveName = new DirectoryInfo(directories[j]).Name;
-                                farmerConfigs.Add(farmerConfig);
-                                stream.Close();
-                            }
-                        }
-                        catch (Exception)
-                        {
-                        }
+                        farmer = (Farmer)SaveGame.farmerSerializer.Deserialize(stream);
+                        SaveGame.loadDataToFarmer(farmer, farmer);
                     }
                 }
-            }
-            farmerConfigs.Sort();
-        }
-
-        private void PatchTileSheet()
-        {
-            Dictionary<TileSheet, Texture2D> tileSheetTextures = (Dictionary<TileSheet, Texture2D>)typeof(XnaDisplayDevice).GetField("m_tileSheetTextures", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Game1.mapDisplayDevice as XnaDisplayDevice);
-            Texture2D tex = tileSheetTextures[Game1.getLocationFromName("FarmHouse").map.TileSheets[Tile.getTileSheetIndex("untitled tile sheet", Game1.getLocationFromName("FarmHouse").map.TileSheets)]];
-            if (tex != null)
-            {
-                this.ContentHelper.PatchTexture(ref tex, "dresser.png", 0, 231, 16, 16);
-                this.ContentHelper.PatchTexture(ref tex, "dresser.png", 1, 232, 16, 16);
-            }
-        }
-
-        private void PatchMap(FarmHouse fh)
-        {
-            if (!this.GlobalConfig.showDresser) return;
-
-            List<Tile> tileArray = new List<Tile>();
-            int x; int top = 231; int bottom = 232;
-
-            switch (fh.upgradeLevel)
-            {
-                case 0:
-                    x = this.GlobalConfig.stoveInCorner ? 7 : 10;
-                    tileArray.Add(new Tile(2, x, 2, /*1224*/top, tileSheet: "untitled tile sheet"));
-                    tileArray.Add(new Tile(1, x, 3, /*179*/bottom, tileSheet: "untitled tile sheet"));
-                    break;
-                case 1:
-                    x = Game1.player.isMarried() ? 25 : 28;
-                    tileArray.Add(new Tile(2, x, 2, /*1224*/top, tileSheet: "untitled tile sheet"));
-                    tileArray.Add(new Tile(1, x, 3, /*179*/bottom, tileSheet: "untitled tile sheet"));
-                    break;
-                case 2:
-                    tileArray.Add(new Tile(2, 33, 11, /*1224*/top, tileSheet: "untitled tile sheet"));
-                    tileArray.Add(new Tile(1, 33, 12, /*179*/bottom, tileSheet: "untitled tile sheet"));
-                    break;
-                case 3:
-                    tileArray.Add(new Tile(2, 33, 11, /*1224*/top, tileSheet: "untitled tile sheet"));
-                    tileArray.Add(new Tile(1, 33, 12, /*179*/bottom, tileSheet: "untitled tile sheet"));
-                    break;
-                default:
-                    Monitor.Log("Non-standard house upgrade level " + fh.upgradeLevel, LogLevel.Error);
-                    break;
-            }
-
-            tileArray = InitializeTileArray(fh, tileArray);
-
-            foreach (Tile tile in tileArray)
-            {
-                if (tile.tileIndex < 0)
+                catch (IOException)
                 {
-                    fh.removeTile(tile.x, tile.y, tile.layer);
                     continue;
                 }
 
-                if (fh.map.GetLayer(tile.layer).Tiles[tile.x, tile.y] == null || fh.map.GetLayer(tile.layer).Tiles[tile.x, tile.y].TileSheet.Id != tile.tileSheet)
+                // get config
+                string localConfigPath = Path.Combine("psconfigs", $"{new DirectoryInfo(saveDir).Name}.json");
+                LocalConfig farmerConfig = this.Helper.ReadJsonFile<LocalConfig>(localConfigPath);
+                if (farmerConfig == null)
                 {
-                    fh.map.GetLayer(tile.layer).Tiles[tile.x, tile.y] = new StaticTile(fh.map.GetLayer(tile.layer), fh.map.TileSheets[tile.tileSheetIndex], BlendMode.Alpha, tile.tileIndex);
+                    farmerConfig = new LocalConfig();
+                    this.Helper.WriteJsonFile(localConfigPath, farmerConfig);
                 }
-                else
-                {
-                    fh.setMapTileIndex(tile.x, tile.y, tile.tileIndex, fh.map.GetLayer(tile.layer).Id);
-                }
-            }
-            switch (fh.upgradeLevel)
-            {
-                case 0:
-                    x = this.GlobalConfig.stoveInCorner ? 7 : 10;
-                    fh.setTileProperty(x, 3, "Buildings", "Action", "GetDressed");
-                    break;
-                case 1:
-                    x = Game1.player.isMarried() ? 25 : 28;
-                    fh.setTileProperty(x, 3, "Buildings", "Action", "GetDressed");
-                    break;
-                case 2:
-                    fh.setTileProperty(33, 12, "Buildings", "Action", "GetDressed");
-                    break;
-                case 3:
-                    fh.setTileProperty(33, 12, "Buildings", "Action", "GetDressed");
-                    break;
-                default:
-                    Monitor.Log("Non-standard house upgrade level " + fh.upgradeLevel, LogLevel.Error);
-                    break;
+                farmerConfig.SaveTime = farmer.saveTime;
+                farmerConfig.SaveName = new DirectoryInfo(saveDir).Name;
+                yield return farmerConfig;
             }
         }
 
-        private List<Tile> InitializeTileArray(GameLocation gl, List<Tile> tileArray)
+        /// <summary>Patch the dresser into the farmhouse tilesheet.</summary>
+        /// <param name="farmhouse">The farmhouse to patch.</param>
+        private void PatchFarmhouseTilesheet(FarmHouse farmhouse)
         {
-            foreach (Tile tile in tileArray)
+            IDictionary<TileSheet, Texture2D> tilesheetTextures = this.Helper.Reflection.GetPrivateValue<Dictionary<TileSheet, Texture2D>>(Game1.mapDisplayDevice as XnaDisplayDevice, "m_tileSheetTextures");
+            Texture2D texture = tilesheetTextures[farmhouse.map.GetTileSheet("untitled tile sheet")];
+            if (texture != null)
             {
-                if (tile.layerIndex < 0 || tile.layerIndex >= gl.map.Layers.Count)
-                {
-                    tile.layerIndex = Tile.getLayerIndex(tile.layer, gl.map.Layers);
-                }
-                if (tile.tileSheetIndex < 0 || tile.tileSheetIndex >= gl.map.TileSheets.Count)
-                {
-                    tile.tileSheetIndex = Tile.getTileSheetIndex(tile.tileSheet, gl.map.TileSheets);
-                }
-                if (string.IsNullOrEmpty(tile.layer))
-                {
-                    tile.layer = Tile.getLayerName(tile.layerIndex, gl.map.Layers);
-                }
-                if (string.IsNullOrEmpty(tile.tileSheet))
-                {
-                    tile.tileSheet = Tile.getTileSheetName(tile.tileSheetIndex, gl.map.TileSheets);
-                }
+                this.ContentHelper.PatchTexture(ref texture, "dresser.png", 0, 231, 16, 16);
+                this.ContentHelper.PatchTexture(ref texture, "dresser.png", 1, 232, 16, 16);
             }
-            return tileArray;
+        }
+
+        /// <summary>Patch the dresser into the farmhouse map.</summary>
+        /// <param name="farmhouse">The farmhouse to patch.</param>
+        private void PatchFarmhouseMap(FarmHouse farmhouse)
+        {
+            if (!this.GlobalConfig.ShowDresser)
+                return;
+
+            // get dresser coordinates
+            Point position;
+            switch (farmhouse.upgradeLevel)
+            {
+                case 0:
+                    position = new Point(this.GlobalConfig.StoveInCorner ? 7 : 10, 2);
+                    break;
+                case 1:
+                    position = new Point(Game1.player.isMarried() ? 25 : 28, 2);
+                    break;
+                case 2:
+                    position = new Point(33, 11);
+                    break;
+                case 3:
+                    position = new Point(33, 11);
+                    break;
+                default:
+                    this.Monitor.Log($"Couldn't patch dresser into farmhouse, unknown upgrade level {farmhouse.upgradeLevel}", LogLevel.Warn);
+                    return;
+            }
+
+            // inject dresser
+            Tile[] tiles = {
+                new Tile(TileLayer.Front, position.X, position.Y, 231, "untitled tile sheet"), // dresser top
+                new Tile(TileLayer.Buildings, position.X, position.Y + 1, 232, "untitled tile sheet") // dresser bottom
+            };
+            foreach (Tile tile in tiles)
+            {
+                Layer layer = farmhouse.map.GetLayer(tile.LayerName);
+                TileSheet tilesheet = farmhouse.map.GetTileSheet(tile.Tilesheet);
+
+                if (layer.Tiles[tile.X, tile.Y] == null || layer.Tiles[tile.X, tile.Y].TileSheet.Id != tile.Tilesheet)
+                    layer.Tiles[tile.X, tile.Y] = new StaticTile(layer, tilesheet, BlendMode.Alpha, tile.TileID);
+                else
+                    farmhouse.setMapTileIndex(tile.X, tile.Y, tile.TileID, layer.Id);
+            }
+
+            // add action attribute
+            farmhouse.setTileProperty(position.X, position.Y + 1, "Buildings", "Action", "GetDressed");
         }
     }
 }

@@ -1,74 +1,47 @@
-﻿using System.Collections.ObjectModel;
-using xTile.Layers;
-using xTile.Tiles;
-
-namespace GetDressed.Framework
+﻿namespace GetDressed.Framework
 {
-    public class Tile
+    /// <summary>Defines an override to apply to a tile position.</summary>
+    internal class Tile
     {
-        public int layerIndex;
-        public int x;
-        public int y;
-        public int tileIndex;
-        public int tileSheetIndex;
-        public string layer;
-        public string tileSheet;
+        /*********
+        ** Properties
+        *********/
+        /// <summary>The tile layer.</summary>
+        public TileLayer Layer { get; }
 
-        public Tile(int layerIndex, int x, int y, int tileIndex, int tileSheetIndex = -1, string tileSheet = "")
+        /// <summary>The tile layer name.</summary>
+        public string LayerName { get; }
+
+        /// <summary>The X tile coordinate.</summary>
+        public int X { get; }
+
+        /// <summary>The Y tile coordinate.</summary>
+        public int Y { get; }
+
+        /// <summary>The tile ID in the tilesheet.</summary>
+        public int TileID { get; }
+
+        /// <summary>The tilesheet for the <see cref="TileID"/>.</summary>
+        public string Tilesheet { get; }
+
+
+        /*********
+        ** Public methods
+        *********/
+        /// <summary>Construct an instance.</summary>
+        /// <param name="layer">The tile layer.</param>
+        /// <param name="x">The X tile coordinate.</param>
+        /// <param name="y">The Y tile coordinate.</param>
+        /// <param name="tileID">The tile ID in the tilesheet.</param>
+        /// <param name="tilesheet">The tilesheet for the <paramref name="tileID"/>.</param>
+        public Tile(TileLayer layer, int x, int y, int tileID, string tilesheet)
         {
-            this.layerIndex = layerIndex; this.x = x; this.y = y; this.tileIndex = tileIndex; this.tileSheetIndex = tileSheetIndex; this.tileSheet = tileSheet;
+            this.Layer = layer;
+            this.LayerName = layer.ToString();
+            this.X = x;
+            this.Y = y;
+            this.TileID = tileID;
+            this.Tilesheet = tilesheet;
         }
-
-        public Tile(string layer, int x, int y, int tileIndex, int tileSheetIndex = -1, string tileSheet = "")
-        {
-            this.layer = layer; this.x = x; this.y = y; this.tileIndex = tileIndex; this.tileSheetIndex = tileSheetIndex; this.tileSheet = tileSheet;
-        }
-
-        static public int getTileSheetIndex(string name, ReadOnlyCollection<TileSheet> tileSheets)
-        {
-            for (int i = 0; i < tileSheets.Count; i++)
-            {
-                if (tileSheets[i].Id.Equals(name))
-                {
-                    return i;
-                }
-            }
-            //StardewModdingAPI.Log.Error("tileSheetName is incorrect, using first tile sheet");
-            return 0;
-        }
-
-        static public string getTileSheetName(int index, ReadOnlyCollection<TileSheet> tileSheets)
-        {
-            if (index >= tileSheets.Count)
-            {
-                //StardewModdingAPI.Log.Error("tileSheetIndex out of range, using first layer");
-                return tileSheets[0].Id;
-            }
-            return tileSheets[index].Id;
-        }
-
-        static public int getLayerIndex(string name, ReadOnlyCollection<Layer> layers)
-        {
-            for (int i = 0; i < layers.Count; i++)
-            {
-                if (layers[i].Id.Equals(name))
-                {
-                    return i;
-                }
-            }
-            //StardewModdingAPI.Log.Error("layerName is incorrect, using first layer");
-            return 0;
-        }
-
-        static public string getLayerName(int index, ReadOnlyCollection<Layer> layers)
-        {
-            if (index >= layers.Count)
-            {
-                //StardewModdingAPI.Log.Error("layerIndex out of range, using first layer");
-                return layers[0].Id;
-            }
-            return layers[index].Id;
-        }
-
     }
 }

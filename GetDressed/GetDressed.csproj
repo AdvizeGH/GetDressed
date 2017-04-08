@@ -38,6 +38,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Framework\MenuTab.cs" />
+    <Compile Include="Framework\TileLayer.cs" />
     <Compile Include="ModConstants.cs" />
     <Compile Include="Framework\Alert.cs" />
     <Compile Include="Framework\CharacterCustomizationMenu.cs" />
