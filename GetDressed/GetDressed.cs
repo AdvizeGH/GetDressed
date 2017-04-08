@@ -15,6 +15,7 @@ using StardewValley.Locations;
 using StardewValley.Menus;
 using xTile.Display;
 using xTile.Tiles;
+using Tile = GetDressed.Framework.Tile;
 
 namespace GetDressed
 {

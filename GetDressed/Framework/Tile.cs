@@ -2,7 +2,7 @@
 using xTile.Layers;
 using xTile.Tiles;
 
-namespace GetDressed
+namespace GetDressed.Framework
 {
     public class Tile
     {
