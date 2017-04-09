@@ -1,40 +1,61 @@
-﻿using System;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace GetDressed.Framework
 {
-    public class LocalConfig : IComparable
+    /// <summary>The JSON model for a per-save settings file.</summary>
+    public class LocalConfig
     {
-        public bool firstRun { get; set; }
+        /*********
+        ** Properties
+        *********/
+        /****
+        ** Metadata
+        ****/
+        /// <summary>Whether this save hasn't been loaded with GetDressed yet.</summary>
+        public bool FirstRun { get; set; }
 
-        public int[] chosenAccessory = new int[numOfFavs];
-        public int[] chosenFace = new int[numOfFavs];
-        public int[] chosenNose = new int[numOfFavs];
-        public int[] chosenBottoms = new int[numOfFavs];
-        public int[] chosenShoes = new int[numOfFavs];
-
-        public int[] chosenSkin = new int[numOfFavs];
-        public int[] chosenShirt = new int[numOfFavs];
-        public int[] chosenHairstyle = new int[numOfFavs];
-        public uint[] chosenHairColor = new uint[numOfFavs];
-        public uint[] chosenEyeColor = new uint[numOfFavs];
-        public uint[] chosenBottomsColor = new uint[numOfFavs];
-
+        /// <summary>The name of the associated save.</summary>
         [JsonIgnore]
-        public int saveTime { get; set; }
-        [JsonIgnore]
-        public string saveName { get; set; }
-        [JsonIgnore]
-        private const int numOfFavs = 37;
+        public string SaveName { get; set; }
 
-        public LocalConfig()
-        {
-            firstRun = true;
-        }
+        /// <summary>When the associated save was last updated.</summary>
+        [JsonIgnore]
+        public int SaveTime { get; set; }
 
-        public int CompareTo(object obj)
-        {
-            return ((LocalConfig)obj).saveTime - saveTime;
-        }
+        /****
+        ** Settings
+        ****/
+        /// <summary>The accessory chosen for each favorite.</summary>
+        public int[] ChosenAccessory = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The face chosen for each favorite.</summary>
+        public int[] ChosenFace = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The nose chosen for each favorite.</summary>
+        public int[] ChosenNose = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The bottom chosen for each favorite.</summary>
+        public int[] ChosenBottoms = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The shoes chosen for each favorite.</summary>
+        public int[] ChosenShoes = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The skin chosen for each favorite.</summary>
+        public int[] ChosenSkin = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The shirt chosen for each favorite.</summary>
+        public int[] ChosenShirt = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The hair style chosen for each favorite.</summary>
+        public int[] ChosenHairstyle = new int[ModConstants.MaxFavorites];
+
+        /// <summary>The hair color for each favorite.</summary>
+        public uint[] ChosenHairColor = new uint[ModConstants.MaxFavorites];
+
+        /// <summary>The eye color chosen for each favorite.</summary>
+        public uint[] ChosenEyeColor = new uint[ModConstants.MaxFavorites];
+
+        /// <summary>The bottom color chosen for each favorite.</summary>
+        public uint[] ChosenBottomsColor = new uint[ModConstants.MaxFavorites];
     }
 }
