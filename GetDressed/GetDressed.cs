@@ -86,7 +86,7 @@ namespace GetDressed
             // load per-save configs
             this.FarmerConfigs = this
                 .ReadLocalConfigs()
-                .OrderBy(config => config.SaveTime)
+                .OrderByDescending(config => config.SaveTime)
                 .ToArray();
         }
 
@@ -319,7 +319,7 @@ namespace GetDressed
                 this.ContentHelper.PatchTexture(ref playerTextures, "female_faces.png", config.ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + config.ChosenNose[0] + (config.ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
                 this.ContentHelper.PatchTexture(ref playerTextures, "female_bottoms.png", config.ChosenBottoms[0], 3);
             }
-            this.ContentHelper.PatchFarmerRenderer(Game1.player, playerTextures);
+            this.ContentHelper.PatchFarmerRenderer(player, playerTextures);
         }
 
         /// <summary>Patch the dresser into the farmhouse tilesheet.</summary>
