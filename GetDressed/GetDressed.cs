@@ -118,18 +118,7 @@ namespace GetDressed
             this.PlayerConfig = this.Helper.ReadJsonFile<LocalConfig>(ModConstants.PerSaveConfigPath) ?? new LocalConfig();
 
             // patch player textures
-            Texture2D playerTextures = this.ContentHelper.GetBaseFarmerTexture(Game1.player.isMale);
-            if (Game1.player.isMale)
-            {
-                this.ContentHelper.PatchTexture(ref playerTextures, "male_faces.png", this.PlayerConfig.ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + this.PlayerConfig.ChosenNose[0] + (this.PlayerConfig.ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
-                this.ContentHelper.PatchTexture(ref playerTextures, "male_bottoms.png", (this.PlayerConfig.ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : this.PlayerConfig.ChosenBottoms[0], 3);
-            }
-            else
-            {
-                this.ContentHelper.PatchTexture(ref playerTextures, "female_faces.png", this.PlayerConfig.ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + this.PlayerConfig.ChosenNose[0] + (this.PlayerConfig.ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
-                this.ContentHelper.PatchTexture(ref playerTextures, "female_bottoms.png", this.PlayerConfig.ChosenBottoms[0], 3);
-            }
-            this.ContentHelper.PatchFarmerRenderer(Game1.player, playerTextures);
+            this.PatchFarmerTexture(Game1.player, this.PlayerConfig);
 
             // update config on first run
             if (this.PlayerConfig.FirstRun)
@@ -237,7 +226,7 @@ namespace GetDressed
                 return;
 
             // override load-game textures
-            if (this.Farmers.Length < 1)
+            if (!this.Farmers.Any())
             {
                 this.Farmers = this.Helper.Reflection.GetPrivateValue<List<Farmer>>(loadMenu, "saveGames").ToArray();
                 if (this.Farmers.Length != this.FarmerConfigs.Length)
@@ -249,24 +238,16 @@ namespace GetDressed
                 // override textures
                 for (int i = 0; i < this.Farmers.Length; i++)
                 {
+                    // initialise for first run
                     if (this.FarmerConfigs[i].FirstRun)
                     {
                         this.FarmerConfigs[i].ChosenAccessory[0] = this.Farmers[i].accessory;
                         this.FarmerConfigs[i].FirstRun = false;
                         this.Helper.WriteJsonFile(Path.Combine("psconfigs", $"{this.FarmerConfigs[i].SaveName}.json"), this.FarmerConfigs[i]);
                     }
-                    Texture2D farmerBase = this.ContentHelper.GetBaseFarmerTexture(this.Farmers[i].isMale);
-                    if (this.Farmers[i].isMale)
-                    {
-                        this.ContentHelper.PatchTexture(ref farmerBase, "male_faces.png", this.FarmerConfigs[i].ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + this.FarmerConfigs[i].ChosenNose[0] + (this.FarmerConfigs[i].ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
-                        this.ContentHelper.PatchTexture(ref farmerBase, "male_bottoms.png", (this.FarmerConfigs[i].ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : this.FarmerConfigs[i].ChosenBottoms[0], 3);
-                    }
-                    else
-                    {
-                        this.ContentHelper.PatchTexture(ref farmerBase, "female_faces.png", this.FarmerConfigs[i].ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + this.FarmerConfigs[i].ChosenNose[0] + (this.FarmerConfigs[i].ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
-                        this.ContentHelper.PatchTexture(ref farmerBase, "female_bottoms.png", this.FarmerConfigs[i].ChosenBottoms[0], 3);
-                    }
-                    this.ContentHelper.PatchFarmerRenderer(this.Farmers[i], farmerBase);
+
+                    // override textures
+                    this.PatchFarmerTexture(this.Farmers[i], this.FarmerConfigs[i]);
                     this.Farmers[i].accessory = this.FarmerConfigs[i].ChosenAccessory[0];
                 }
             }
@@ -320,6 +301,25 @@ namespace GetDressed
                 farmerConfig.SaveName = new DirectoryInfo(saveDir).Name;
                 yield return farmerConfig;
             }
+        }
+
+        /// <summary>Patch the loaded texture for a player to reflect their custom settings.</summary>
+        /// <param name="player">The player whose textures to patch.</param>
+        /// <param name="config">The per-save settings for the player.</param>
+        private void PatchFarmerTexture(Farmer player, LocalConfig config)
+        {
+            Texture2D playerTextures = this.ContentHelper.GetBaseFarmerTexture(player.isMale);
+            if (player.isMale)
+            {
+                this.ContentHelper.PatchTexture(ref playerTextures, "male_faces.png", config.ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + config.ChosenNose[0] + (config.ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, "male_bottoms.png", (config.ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : config.ChosenBottoms[0], 3);
+            }
+            else
+            {
+                this.ContentHelper.PatchTexture(ref playerTextures, "female_faces.png", config.ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + config.ChosenNose[0] + (config.ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, "female_bottoms.png", config.ChosenBottoms[0], 3);
+            }
+            this.ContentHelper.PatchFarmerRenderer(Game1.player, playerTextures);
         }
 
         /// <summary>Patch the dresser into the farmhouse tilesheet.</summary>

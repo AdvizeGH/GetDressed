@@ -12,7 +12,7 @@ namespace GetDressed.Framework
         ** Metadata
         ****/
         /// <summary>Whether this save hasn't been loaded with GetDressed yet.</summary>
-        public bool FirstRun { get; set; }
+        public bool FirstRun { get; set; } = true;
 
         /// <summary>The name of the associated save.</summary>
         [JsonIgnore]
