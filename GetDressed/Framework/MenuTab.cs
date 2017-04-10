@@ -12,7 +12,7 @@
         /// <summary>The main 'about' screen.</summary>
         About = 3,
 
-        /// <summary>The favorities 'extra outfits' submenu.</summary>
+        /// <summary>The favorites 'extra outfits' submenu.</summary>
         FavoritesExtras = 4
     }
 }
