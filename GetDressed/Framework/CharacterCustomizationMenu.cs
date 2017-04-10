@@ -35,6 +35,9 @@ namespace GetDressed.Framework
         /// <summary>The zoom level before the menu was opened.</summary>
         private readonly float PlayerZoomLevel;
 
+        /// <summary>The current mod version.</summary>
+        private readonly ISemanticVersion ModVersion;
+
         /****
         ** Components
         ****/
@@ -179,10 +182,11 @@ namespace GetDressed.Framework
         /// <summary>Construct an instance.</summary>
         /// <param name="contentHelper">Encapsulates the underlying mod texture management.</param>
         /// <param name="modHelper">Provides simplified APIs for writing mods.</param>
+        /// <param name="modVersion">The current mod version.</param>
         /// <param name="globalConfig">The global config settings.</param>
         /// <param name="playerConfig">The current per-save config settings.</param>
         /// <param name="zoomLevel">The zoom level before the menu was opened.</param>
-        public CharacterCustomizationMenu(ContentHelper contentHelper, IModHelper modHelper, GlobalConfig globalConfig, LocalConfig playerConfig, float zoomLevel)
+        public CharacterCustomizationMenu(ContentHelper contentHelper, IModHelper modHelper, ISemanticVersion modVersion, GlobalConfig globalConfig, LocalConfig playerConfig, float zoomLevel)
             : base(
                   x: Game1.viewport.Width / 2 - (680 + IClickableMenu.borderWidth * 2) / 2,
                   y: Game1.viewport.Height / 2 - (600 + IClickableMenu.borderWidth * 2) / 2 - Game1.tileSize,
@@ -193,6 +197,7 @@ namespace GetDressed.Framework
             // save metadata
             this.ContentHelper = contentHelper;
             this.ModHelper = modHelper;
+            this.ModVersion = modVersion;
             this.GlobalConfig = globalConfig;
             this.PlayerConfig = playerConfig;
             this.PlayerZoomLevel = zoomLevel;
@@ -920,7 +925,7 @@ namespace GetDressed.Framework
 
                     // info
                     Utility.drawTextWithShadow(spriteBatch, "Get Dressed created by JinxieWinxie and Advize", Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 175), Color.Black);
-                    Utility.drawTextWithShadow(spriteBatch, "You are using version:  " + ModConstants./*globalConfig.*/VersionNumber, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 225), Color.Black);
+                    Utility.drawTextWithShadow(spriteBatch, $"You are using version:  {this.ModVersion}", Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 225), Color.Black);
                     SpriteText.drawString(spriteBatch, "Settings:", xPositionOnScreen + 55, yPositionOnScreen + 275);
                     Utility.drawTextWithShadow(spriteBatch, "Face Types (M-F): " + this.GlobalConfig.MaleFaceTypes + "-" + this.GlobalConfig.FemaleFaceTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 345), Color.Black);
                     Utility.drawTextWithShadow(spriteBatch, "Nose Types (M-F): " + this.GlobalConfig.MaleNoseTypes + "-" + this.GlobalConfig.FemaleNoseTypes, Game1.smallFont, new Vector2(xPositionOnScreen + 400, yPositionOnScreen + 345), Color.Black);

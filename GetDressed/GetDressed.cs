@@ -182,7 +182,7 @@ namespace GetDressed
             {
                 Game1.player.completelyStopAnimatingOrDoingAction();
                 Game1.playSound("bigDeSelect");
-                Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
+                Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.ModManifest.Version, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
             }
         }
 
@@ -206,7 +206,7 @@ namespace GetDressed
 
             // open menu
             Game1.playSound("bigDeSelect");
-            Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
+            Game1.activeClickableMenu = new CharacterCustomizationMenu(this.ContentHelper, this.Helper, this.ModManifest.Version, this.GlobalConfig, this.PlayerConfig, Game1.options.zoomLevel);
         }
 
         /// <summary>Patch the textures in the load menu if it's active.</summary>
