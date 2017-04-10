@@ -7,7 +7,7 @@ namespace GetDressed
     internal static class ModConstants
     {
         /// <summary>The mod version number.</summary>
-        public static string VersionNumber => "3.2";
+        public static string VersionNumber => "3.3";
 
         /// <summary>The relative path to the current per-save config file, or <c>null</c> if the save isn't loaded yet.</summary>
         public static string PerSaveConfigPath => Constants.SaveFolderName != null

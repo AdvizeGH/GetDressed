@@ -4,7 +4,7 @@
     public class GlobalConfig
     {
         /// <summary>The mod version number.</summary>
-        public string VersionNumber { get; set; } = "3.2";
+        public string VersionNumber { get; set; } = "3.3";
 
         /// <summary>The keyboard button which opens the menu.</summary>
         public string MenuAccessKey { get; set; } = "C";
