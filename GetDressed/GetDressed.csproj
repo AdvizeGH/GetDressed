@@ -75,15 +75,27 @@
     <Content Include="overrides\female_bottoms.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="overrides\female_faces.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="overrides\female_face0_nose0.png" />
+    <Content Include="overrides\female_face0_nose1.png" />
+    <Content Include="overrides\female_face0_nose2.png" />
+    <Content Include="overrides\female_face1_nose0.png" />
+    <Content Include="overrides\female_face1_nose1.png" />
+    <Content Include="overrides\female_face1_nose2.png" />
+    <Content Include="overrides\female_shoes0.png" />
+    <Content Include="overrides\female_shoes1.png" />
+    <Content Include="overrides\female_shoes2.png" />
+    <Content Include="overrides\female_shoes3.png" />
     <Content Include="overrides\male_bottoms.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="overrides\male_faces.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="overrides\male_face0_nose0.png" />
+    <Content Include="overrides\male_face0_nose1.png" />
+    <Content Include="overrides\male_face0_nose2.png" />
+    <Content Include="overrides\male_face1_nose0.png" />
+    <Content Include="overrides\male_face1_nose1.png" />
+    <Content Include="overrides\male_face1_nose2.png" />
+    <Content Include="overrides\male_shoes0.png" />
+    <Content Include="overrides\male_shoes1.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Pathoschild.Stardew.ModBuildConfig.1.5.0\build\Pathoschild.Stardew.ModBuildConfig.targets" Condition="Exists('..\packages\Pathoschild.Stardew.ModBuildConfig.1.5.0\build\Pathoschild.Stardew.ModBuildConfig.targets')" />

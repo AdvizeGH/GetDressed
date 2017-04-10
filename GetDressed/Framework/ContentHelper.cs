@@ -77,15 +77,15 @@ namespace GetDressed.Framework
         /// <param name="targetID">The sprite ID within the target texture to overwrite.</param>
         /// <param name="gridWidth">The width of each sprite.</param>
         /// <param name="gridHeight">The height of each sprite.</param>
-        public void PatchTexture(ref Texture2D targetTexture, string sourceTextureName, int sourceID, int targetID, int gridWidth = 96, int gridHeight = 672)
+        /// <param name="adjustedHeight">The desired height of a portion of a sprite.</param>
+        public void PatchTexture(ref Texture2D targetTexture, string sourceTextureName, int sourceID, int targetID, int gridWidth = 96, int gridHeight = 672, int adjustedHeight = 0)
         {
             using (FileStream textureStream = new FileStream(Path.Combine(this.Content.RootDirectory, sourceTextureName), FileMode.Open))
             using (Texture2D sourceTexture = Texture2D.FromStream(Game1.graphics.GraphicsDevice, textureStream))
             {
-
-                Color[] data = new Color[gridWidth * gridHeight];
-                sourceTexture.GetData(0, GetSourceRect(sourceID, sourceTexture, gridWidth, gridHeight), data, 0, data.Length);
-                targetTexture.SetData(0, GetSourceRect(targetID, targetTexture, gridWidth, gridHeight), data, 0, data.Length);
+                Color[] data = new Color[gridWidth * (adjustedHeight == 0 ? gridHeight : adjustedHeight)];
+                sourceTexture.GetData(0, GetSourceRect(sourceID, sourceTexture, gridWidth, gridHeight, adjustedHeight), data, 0, data.Length);
+                targetTexture.SetData(0, GetSourceRect(targetID, targetTexture, gridWidth, gridHeight, adjustedHeight), data, 0, data.Length);
             }
         }
 
@@ -123,9 +123,10 @@ namespace GetDressed.Framework
         /// <param name="texture">The spritesheet.</param>
         /// <param name="gridWidth">The width of each sprite.</param>
         /// <param name="gridHeight">The height of each sprite.</param>
-        private Rectangle GetSourceRect(int index, Texture2D texture, int gridWidth, int gridHeight)
+        /// <param name="adjustedHeight">The height of a portion of a sprite.</param>
+        private Rectangle GetSourceRect(int index, Texture2D texture, int gridWidth, int gridHeight, int adjustedHeight)
         {
-            return new Rectangle(index % (texture.Width / gridWidth) * gridWidth, index / (texture.Width / gridWidth) * gridHeight, gridWidth, gridHeight);
+            return new Rectangle(index % (texture.Width / gridWidth) * gridWidth, index / (texture.Width / gridWidth) * gridHeight + (adjustedHeight == 0 ? 0 : 32 - adjustedHeight), gridWidth, adjustedHeight == 0 ? gridHeight : adjustedHeight);
         }
     }
 }

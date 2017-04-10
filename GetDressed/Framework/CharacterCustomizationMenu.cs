@@ -1718,10 +1718,12 @@ namespace GetDressed.Framework
         private void PatchBaseTexture()
         {
             Game1.player.FarmerRenderer.baseTexture = this.ContentHelper.GetBaseFarmerTexture(Game1.player.isMale);
-            string texturePath = Game1.player.isMale ? "male_" : "female_";
+            string texturePath = Game1.player.isMale ? "male" : "female";
 
-            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "faces.png", this.FaceType * (Game1.player.isMale ? this.GlobalConfig.MaleNoseTypes : this.GlobalConfig.FemaleNoseTypes) + this.NoseType + (this.Shoes * ((Game1.player.isMale ? this.GlobalConfig.MaleNoseTypes : this.GlobalConfig.FemaleNoseTypes) * (Game1.player.isMale ? this.GlobalConfig.MaleFaceTypes : this.GlobalConfig.FemaleFaceTypes))), 0);
-            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "bottoms.png", this.Bottoms, 3);
+            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, $"{texturePath}_face{this.FaceType}_nose{this.NoseType}.png", 0, 0);
+            for (int i = 0; i < ModConstants.MaleShoeSpriteHeights.Length; i++)
+                this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, $"{texturePath}_shoes{this.Shoes}.png", 1 * i, (1 * i) * 4, 96, 32, Game1.player.isMale ? ModConstants.MaleShoeSpriteHeights[i] : ModConstants.FemaleShoeSpriteHeights[i]);
+            this.ContentHelper.PatchTexture(ref Game1.player.FarmerRenderer.baseTexture, texturePath + "_bottoms.png", this.Bottoms, 3);
             this.ContentHelper.FixFarmerEffects(Game1.player);
         }
 

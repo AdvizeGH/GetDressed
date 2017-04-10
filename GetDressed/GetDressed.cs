@@ -212,11 +212,11 @@ namespace GetDressed
         /// <summary>Patch the textures in the load menu if it's active.</summary>
         private void PatchLoadMenu()
         {
-            if (!(Game1.activeClickableMenu is TitleMenu titleMenu))
+            if (!(Game1.activeClickableMenu is TitleMenu))
                 return;
 
             // get load menu
-            LoadGameMenu loadMenu = this.Helper.Reflection.GetPrivateValue<IClickableMenu>(titleMenu, "subMenu") as LoadGameMenu;
+            LoadGameMenu loadMenu = this.Helper.Reflection.GetPrivateValue<IClickableMenu>(Game1.activeClickableMenu, "subMenu") as LoadGameMenu;
             if (loadMenu == null || loadMenu == this.PreviousLoadMenu)
                 return;
             this.PreviousLoadMenu = loadMenu;
@@ -311,12 +311,16 @@ namespace GetDressed
             Texture2D playerTextures = this.ContentHelper.GetBaseFarmerTexture(player.isMale);
             if (player.isMale)
             {
-                this.ContentHelper.PatchTexture(ref playerTextures, "male_faces.png", config.ChosenFace[0] * this.GlobalConfig.MaleNoseTypes + config.ChosenNose[0] + (config.ChosenShoes[0] * (this.GlobalConfig.MaleNoseTypes * this.GlobalConfig.MaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, $"male_face{config.ChosenFace[0]}_nose{config.ChosenNose[0]}.png", 0, 0);
+                for (int i = 0; i < ModConstants.MaleShoeSpriteHeights.Length; i++)
+                    this.ContentHelper.PatchTexture(ref playerTextures, $"male_shoes{config.ChosenShoes[0]}.png", 1 * i, (1 * i) * 4, 96, 32, ModConstants.MaleShoeSpriteHeights[i]);
                 this.ContentHelper.PatchTexture(ref playerTextures, "male_bottoms.png", (config.ChosenBottoms[0] >= this.GlobalConfig.MaleBottomsTypes) ? 0 : config.ChosenBottoms[0], 3);
             }
             else
             {
-                this.ContentHelper.PatchTexture(ref playerTextures, "female_faces.png", config.ChosenFace[0] * this.GlobalConfig.FemaleNoseTypes + config.ChosenNose[0] + (config.ChosenShoes[0] * (this.GlobalConfig.FemaleNoseTypes * this.GlobalConfig.FemaleFaceTypes)), 0);
+                this.ContentHelper.PatchTexture(ref playerTextures, $"female_face{config.ChosenFace[0]}_nose{config.ChosenNose[0]}.png", 0, 0);
+                for (int i = 0; i < ModConstants.FemaleShoeSpriteHeights.Length; i++)
+                    this.ContentHelper.PatchTexture(ref playerTextures, $"female_shoes{config.ChosenShoes[0]}.png", 1 * i, (1 * i) * 4, 96, 32, ModConstants.MaleShoeSpriteHeights[i]);
                 this.ContentHelper.PatchTexture(ref playerTextures, "female_bottoms.png", config.ChosenBottoms[0], 3);
             }
             this.ContentHelper.PatchFarmerRenderer(player, playerTextures);
