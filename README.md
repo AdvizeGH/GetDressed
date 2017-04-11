@@ -50,6 +50,7 @@ file if you want. These are the main settings:
 ## Versions
 ### 3.3
 * Updated for SMAPI 1.9.
+* Segregated override textures (additional appearance options are now easily implemented).
 * Internal refactoring.
 
 ### 3.2
