@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using GetDressed.Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,6 +15,7 @@ using StardewValley.Menus;
 using xTile.Display;
 using xTile.Layers;
 using xTile.Tiles;
+using SFarmer = StardewValley.Farmer;
 using Tile = GetDressed.Framework.Tile;
 
 namespace GetDressed
@@ -46,7 +48,7 @@ namespace GetDressed
         private IClickableMenu PreviousLoadMenu;
 
         /// <summary>The farmer data for all saves, if the game hasn't loaded yet.</summary>
-        private Farmer[] Farmers = new Farmer[0];
+        private SFarmer[] Farmers = new SFarmer[0];
 
         /// <summary>The per-save configs for all saves, if the game hasn't loaded yet.</summary>
         private LocalConfig[] FarmerConfigs = new LocalConfig[0];
@@ -59,9 +61,19 @@ namespace GetDressed
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
+            // load settings
             this.GlobalConfig = helper.ReadConfig<GlobalConfig>();
 
-            GameEvents.LoadContent += this.GameEvents_LoadContent;
+            // load content manager
+            this.ContentHelper = new ContentHelper(this.Helper, this.Monitor, Game1.content.ServiceProvider);
+
+            // load per-save configs
+            this.FarmerConfigs = this
+                .ReadLocalConfigs()
+                .OrderByDescending(config => config.SaveTime)
+                .ToArray();
+
+            // hook events
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
             TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
 
@@ -75,21 +87,6 @@ namespace GetDressed
         /*********
         ** Private methods
         *********/
-        /// <summary>The event handler called when the mouse state changes.</summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event arguments.</param>
-        private void GameEvents_LoadContent(object sender, EventArgs e)
-        {
-            // load content manager
-            this.ContentHelper = new ContentHelper(this.Helper, this.Monitor, Game1.content.ServiceProvider);
-
-            // load per-save configs
-            this.FarmerConfigs = this
-                .ReadLocalConfigs()
-                .OrderByDescending(config => config.SaveTime)
-                .ToArray();
-        }
-
         /// <summary>The event handler called when the game updates its state.</summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event arguments.</param>
@@ -103,7 +100,7 @@ namespace GetDressed
             }
 
             // remove load menu patcher
-            this.Farmers = new Farmer[0];
+            this.Farmers = new SFarmer[0];
             this.FarmerConfigs = new LocalConfig[0];
             if (!string.IsNullOrEmpty(ModConstants.PerSaveConfigPath))
                 GameEvents.UpdateTick -= Event_UpdateTick;
@@ -216,19 +213,19 @@ namespace GetDressed
                 return;
 
             // get load menu
-            LoadGameMenu loadMenu = this.Helper.Reflection.GetPrivateValue<IClickableMenu>(Game1.activeClickableMenu, "subMenu") as LoadGameMenu;
+            LoadGameMenu loadMenu = TitleMenu.subMenu as LoadGameMenu;
             if (loadMenu == null || loadMenu == this.PreviousLoadMenu)
                 return;
-            this.PreviousLoadMenu = loadMenu;
 
-            // skip if loading
-            if (this.Helper.Reflection.GetPrivateValue<bool>(loadMenu, "loading"))
+            // wait until menu is initialised
+            if (this.Helper.Reflection.GetPrivateValue<Task<List<SFarmer>>>(loadMenu, "_initTask") != null)
                 return;
+            this.PreviousLoadMenu = loadMenu;
 
             // override load-game textures
             if (!this.Farmers.Any())
             {
-                this.Farmers = this.Helper.Reflection.GetPrivateValue<List<Farmer>>(loadMenu, "saveGames").ToArray();
+                this.Farmers = this.Helper.Reflection.GetPrivateValue<List<SFarmer>>(loadMenu, "saveGames").ToArray();
                 if (this.Farmers.Length != this.FarmerConfigs.Length)
                 {
                     this.Monitor.Log("GetDressed could not load per-save configs.", LogLevel.Error);
@@ -254,7 +251,7 @@ namespace GetDressed
 
             // inject new farmers
             this.Helper.Reflection
-                .GetPrivateField<List<Farmer>>(loadMenu, "saveGames")
+                .GetPrivateField<List<SFarmer>>(loadMenu, "saveGames")
                 .SetValue(this.Farmers.ToList());
         }
 
@@ -275,13 +272,13 @@ namespace GetDressed
             foreach (string saveDir in directories)
             {
                 // get farmer info
-                Farmer farmer;
+                SFarmer farmer;
                 try
                 {
                     using (Stream stream = File.Open(Path.Combine(savePath, saveDir, "SaveGameInfo"), FileMode.Open))
                     {
-                        farmer = (Farmer)SaveGame.farmerSerializer.Deserialize(stream);
-                        SaveGame.loadDataToFarmer(farmer, farmer);
+                        farmer = (SFarmer)SaveGame.farmerSerializer.Deserialize(stream);
+                        SaveGame.loadDataToFarmer(farmer);
                     }
                 }
                 catch (IOException)
@@ -306,7 +303,7 @@ namespace GetDressed
         /// <summary>Patch the loaded texture for a player to reflect their custom settings.</summary>
         /// <param name="player">The player whose textures to patch.</param>
         /// <param name="config">The per-save settings for the player.</param>
-        private void PatchFarmerTexture(Farmer player, LocalConfig config)
+        private void PatchFarmerTexture(SFarmer player, LocalConfig config)
         {
             Texture2D playerTextures = this.ContentHelper.GetBaseFarmerTexture(player.isMale);
             if (player.isMale)
