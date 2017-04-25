@@ -74,6 +74,7 @@ namespace GetDressed
                 .ToArray();
 
             // hook events
+            SaveEvents.AfterReturnToTitle += this.SaveEvents_AfterReturnToTitle;
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
             TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
 
@@ -87,6 +88,26 @@ namespace GetDressed
         /*********
         ** Private methods
         *********/
+        /// <summary>The event handler called when the player stops a session and returns to the title screen..</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event arguments.</param>
+        private void SaveEvents_AfterReturnToTitle(object sender, EventArgs e)
+        {
+            // reset state
+            this.PreviousLoadMenu = null;
+            this.Farmers = new SFarmer[0];
+            this.IsFirstDay = true;
+
+            // load per-save configs
+            this.FarmerConfigs = this
+                .ReadLocalConfigs()
+                .OrderByDescending(config => config.SaveTime)
+                .ToArray();
+
+            // restore load-menu patcher
+            GameEvents.UpdateTick += this.Event_UpdateTick;
+        }
+
         /// <summary>The event handler called when the game updates its state.</summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event arguments.</param>
