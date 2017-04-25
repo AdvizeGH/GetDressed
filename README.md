@@ -48,6 +48,10 @@ file if you want. These are the main settings:
 `FemaleFaceTypes`<br />`FemaleNoseTypes`<br />`FemaleBottomsTypes`<br />`FemaleShoeTypes`<br />`MaleFaceTypes`<br />`MaleNoseTypes`<br />`MaleBottomsTypes`<br />`MaleShoeTypes` | Change the number of available customisation options if you've added more sprites to the `overrides` spritesheets. Only change this if you know what you're doing.
 
 ## Versions
+### 3.4
+* Updated for Stardew Valley 1.2.
+* Added support for 'exit to title' feature in Stardew Valley 1.2.
+
 ### 3.3
 * Updated for SMAPI 1.9.
 * Segregated override textures (additional appearance options are now easily implemented).
