@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
+using SFarmer = StardewValley.Farmer;
 
 namespace GetDressed.Framework
 {
@@ -63,7 +64,7 @@ namespace GetDressed.Framework
         /// <summary>Update a player's spritesheets to use the GetDressed textures.</summary>
         /// <param name="farmer">The player to update.</param>
         /// <param name="baseTexture">The base farmer texture to inject.</param>
-        public void PatchFarmerRenderer(Farmer farmer, Texture2D baseTexture)
+        public void PatchFarmerRenderer(SFarmer farmer, Texture2D baseTexture)
         {
             farmer.FarmerRenderer = new FarmerRenderer(baseTexture) { heightOffset = farmer.isMale ? 0 : 4 };
             FarmerRenderer.accessoriesTexture = this.AccessoriesTexture;
@@ -91,7 +92,7 @@ namespace GetDressed.Framework
 
         /// <summary>Force a player character to render the correct accessories.</summary>
         /// <param name="farmer">The player to update.</param>
-        public void FixFarmerEffects(Farmer farmer)
+        public void FixFarmerEffects(SFarmer farmer)
         {
             farmer.changeShirt(farmer.shirt);
             farmer.changeEyeColor(farmer.newEyeColor);
