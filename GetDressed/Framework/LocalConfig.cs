@@ -18,10 +18,6 @@ namespace GetDressed.Framework
         [JsonIgnore]
         public string SaveName { get; set; }
 
-        /// <summary>When the associated save was last updated.</summary>
-        [JsonIgnore]
-        public int SaveTime { get; set; }
-
         /****
         ** Settings
         ****/
