@@ -252,7 +252,9 @@ namespace GetDressed
                 {
                     // get save info (save name stuffed into favorite thing field)
                     string saveName = saveEntry.favoriteThing;
-                    if (!this.FarmerConfigs.TryGetValue(saveName, out LocalConfig config))
+                    LocalConfig config;
+                    if (!this.FarmerConfigs.TryGetValue(saveName, out config))
+                        //if (!this.FarmerConfigs.TryGetValue(saveName, out LocalConfig config))
                         continue;
 
                     // initialise for first run
