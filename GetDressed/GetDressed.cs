@@ -50,8 +50,8 @@ namespace GetDressed
         /// <summary>The farmer data for all saves, if the game hasn't loaded yet.</summary>
         private SFarmer[] Farmers = new SFarmer[0];
 
-        /// <summary>The per-save configs for all saves, if the game hasn't loaded yet.</summary>
-        private LocalConfig[] FarmerConfigs = new LocalConfig[0];
+        /// <summary>The per-save configs for valid saves indexed by save name, if the game hasn't loaded yet.</summary>
+        private IDictionary<string, LocalConfig> FarmerConfigs = new Dictionary<string, LocalConfig>();
 
 
         /*********
@@ -70,8 +70,7 @@ namespace GetDressed
             // load per-save configs
             this.FarmerConfigs = this
                 .ReadLocalConfigs()
-                .OrderByDescending(config => config.SaveTime)
-                .ToArray();
+                .ToDictionary(p => p.SaveName);
 
             // hook events
             SaveEvents.AfterReturnToTitle += this.SaveEvents_AfterReturnToTitle;
@@ -101,8 +100,7 @@ namespace GetDressed
             // load per-save configs
             this.FarmerConfigs = this
                 .ReadLocalConfigs()
-                .OrderByDescending(config => config.SaveTime)
-                .ToArray();
+                .ToDictionary(p => p.SaveName);
 
             // restore load-menu patcher
             GameEvents.UpdateTick += this.Event_UpdateTick;
@@ -122,7 +120,7 @@ namespace GetDressed
 
             // remove load menu patcher
             this.Farmers = new SFarmer[0];
-            this.FarmerConfigs = new LocalConfig[0];
+            this.FarmerConfigs = new Dictionary<string, LocalConfig>();
             if (!string.IsNullOrEmpty(ModConstants.PerSaveConfigPath))
                 GameEvents.UpdateTick -= Event_UpdateTick;
         }
@@ -246,27 +244,28 @@ namespace GetDressed
             // override load-game textures
             if (!this.Farmers.Any())
             {
+                // get saves
                 this.Farmers = this.Helper.Reflection.GetPrivateValue<List<SFarmer>>(loadMenu, "saveGames").ToArray();
-                if (this.Farmers.Length != this.FarmerConfigs.Length)
-                {
-                    this.Monitor.Log("GetDressed could not load per-save configs.", LogLevel.Error);
-                    return;
-                }
 
                 // override textures
-                for (int i = 0; i < this.Farmers.Length; i++)
+                foreach (SFarmer saveEntry in this.Farmers)
                 {
+                    // get save info (save name stuffed into favorite thing field)
+                    string saveName = saveEntry.favoriteThing;
+                    if (!this.FarmerConfigs.TryGetValue(saveName, out LocalConfig config))
+                        continue;
+
                     // initialise for first run
-                    if (this.FarmerConfigs[i].FirstRun)
+                    if (config.FirstRun)
                     {
-                        this.FarmerConfigs[i].ChosenAccessory[0] = this.Farmers[i].accessory;
-                        this.FarmerConfigs[i].FirstRun = false;
-                        this.Helper.WriteJsonFile(Path.Combine("psconfigs", $"{this.FarmerConfigs[i].SaveName}.json"), this.FarmerConfigs[i]);
+                        config.ChosenAccessory[0] = saveEntry.accessory;
+                        config.FirstRun = false;
+                        this.Helper.WriteJsonFile(Path.Combine("psconfigs", $"{config.SaveName}.json"), config);
                     }
 
                     // override textures
-                    this.PatchFarmerTexture(this.Farmers[i], this.FarmerConfigs[i]);
-                    this.Farmers[i].accessory = this.FarmerConfigs[i].ChosenAccessory[0];
+                    this.PatchFarmerTexture(saveEntry, config);
+                    saveEntry.accessory = config.ChosenAccessory[0];
                 }
             }
 
@@ -292,20 +291,6 @@ namespace GetDressed
             // get per-save configs
             foreach (string saveDir in directories)
             {
-                // get farmer info
-                SFarmer farmer;
-                try
-                {
-                    using (Stream stream = File.Open(Path.Combine(savePath, saveDir, "SaveGameInfo"), FileMode.Open))
-                    {
-                        farmer = (SFarmer)SaveGame.farmerSerializer.Deserialize(stream);
-                        SaveGame.loadDataToFarmer(farmer);
-                    }
-                }
-                catch (IOException)
-                {
-                    continue;
-                }
 
                 // get config
                 string localConfigPath = Path.Combine("psconfigs", $"{new DirectoryInfo(saveDir).Name}.json");
@@ -315,7 +300,6 @@ namespace GetDressed
                     farmerConfig = new LocalConfig();
                     this.Helper.WriteJsonFile(localConfigPath, farmerConfig);
                 }
-                farmerConfig.SaveTime = farmer.saveTime;
                 farmerConfig.SaveName = new DirectoryInfo(saveDir).Name;
                 yield return farmerConfig;
             }
