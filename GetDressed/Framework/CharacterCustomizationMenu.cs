@@ -432,7 +432,7 @@ namespace GetDressed.Framework
                     {
                         this.GlobalConfig.HideMaleSkirts = !this.GlobalConfig.HideMaleSkirts;
                         this.ModHelper.WriteConfig(this.GlobalConfig);
-                        this.Alerts.Add(new Alert(menuTextures, new Rectangle(80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + IClickableMenu.borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + IClickableMenu.borderWidth * 2) / 2 - Game1.tileSize, "Skirts " + (this.GlobalConfig.HideMaleSkirts ? "Hidden" : "Unhidden") + " for Males.", 1200, false));
+                        this.Alerts.Add(new Alert(menuTextures, new Rectangle(this.GlobalConfig.HideMaleSkirts ? 48 : 80, 144, 16, 16), Game1.viewport.Width / 2 - (700 + IClickableMenu.borderWidth * 2) / 2, Game1.viewport.Height / 2 - (600 + IClickableMenu.borderWidth * 2) / 2 - Game1.tileSize, "Skirts " + (this.GlobalConfig.HideMaleSkirts ? "Hidden" : "Unhidden") + " for Males.", 1200, false));
                         Game1.playSound("coin");
                         break;
                     }
